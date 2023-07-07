@@ -18,9 +18,17 @@ class Profile:
             self.info = self.generate_basic_info()
         
         
-    def generate_basic_info():
+    def add_to_info(self, key:str, value:any):
+        self.info[key] = value
+        
+        
+    def generate_basic_info(self):
         # email
         # print password
         pass
     
+    
+    
+    def kill(self):
+        utils.save_file(self.info_path, self.info)
     
