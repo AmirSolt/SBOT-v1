@@ -1,11 +1,10 @@
 
 from d_types import Action
-
+from ...browser import Browser
 
 class Actor:
     
-    def act(action:Action):
+    def act(self, browser:Browser, action:Action):
         
-        # pause
         
         pass
