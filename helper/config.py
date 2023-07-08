@@ -4,6 +4,11 @@
 
 WORKER_DIR = "./saves/workers/{worker_id}/"
 
+STATIC_DIR = "./static/"
+STATE_IMAGES_DIR = STATIC_DIR + "state_images/" 
+STATE_IMAGES_EMBEDDING_PATH = STATIC_DIR+"state_images_embeddings.json"
+
+
 BROWSER_DIR = WORKER_DIR + "browser/"
 BROWSER_COOKIES_DIR = BROWSER_DIR + "cookies/"
 BROWSER_COOKIES_FILE = BROWSER_COOKIES_DIR +  "cookies.pickle"

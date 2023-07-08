@@ -16,7 +16,8 @@ class State:
     # get forms
     # assist AI
     # ask for help
-    pass
+    def __init__(self, name:str) -> None:
+        pass
     
     
 class Action:

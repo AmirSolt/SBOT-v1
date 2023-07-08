@@ -9,9 +9,9 @@ class Profile:
     """
     perm_memory and survey_memory both have the same interface which is
     {
-            "question":*,
-            "answer":*,
-            "embedding":*,
+        "question":*,
+        "answer":*,
+        "embedding":*,
     }
         
     """
@@ -66,8 +66,8 @@ class Profile:
         returns memory items close to target_embedding
         """
         embeddings = [memory_item["embedding"] for memory_item in memory]
-        indices = AI.get_similar_indecies(embeddings, target_embedding)
-        return [memory[i] for i in indices]
+        memory_items = AI.get_similar_items(memory, embeddings, target_embedding)
+        return memory_items
         
         
         
