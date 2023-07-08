@@ -38,7 +38,7 @@ class Worker:
               
         screenshot_path = self.browser.get_current_screenshot_path()
         page_html = self.browser.get_current_page_html()
-        state:State = self.observer.get_current_states(screenshot_path, page_html)
+        state:str = self.observer.get_current_states(screenshot_path, page_html)
         action:Action =  self.state_manager.solve_state(state, screenshot_path, page_html, self.profile)
 
         self.actor.act(self.browser, action)
