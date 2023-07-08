@@ -13,6 +13,10 @@ def create_dir_if_not_exist(path):
         os.makedirs(path)
         
         
+def does_file_exist(filename):
+    return os.path.isfile(filename)
+        
+        
 def save_file(path:str, content):
     with open(path, "w") as file:
         file.write(content)
