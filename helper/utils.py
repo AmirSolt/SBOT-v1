@@ -5,7 +5,8 @@ import os
 
 
 
-
+def get_all_dirs(directory_path):
+    return [d for d in os.listdir(directory_path) if os.path.isdir(os.path.join(directory_path, d))]
 
 
 def create_dir_if_not_exist(path):

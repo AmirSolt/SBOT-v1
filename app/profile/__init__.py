@@ -1,4 +1,4 @@
-from helper import utils
+from helper import utils, config
 from funcs import AI
 
 
@@ -18,22 +18,23 @@ class Profile:
     
     
     
-    def __init__(self, worker_dir:str) -> None:
+    def __init__(self, worker_id:str) -> None:
         
         self.perm_memory:list[dict] = []
         self.survey_memory:list[dict] = []
-        self.perm_memory_path = self.profile_dir+"perm_memory.json"
-        self.survey_memory_path = self.profile_dir+"survey_memory.json"
         
-        self.__init_filesys(worker_dir)
+        self.profile_dir = config.PROFILE_DIR.format(worker_id=worker_id)
+        self.perm_memory_path = config.PROFILE_PERM_MEM_FILE.format(worker_id=worker_id)
+        self.survey_memory_path = config.PROFILE_SURVEY_MEM_FILE.format(worker_id=worker_id)
+        
+        self.__init_filesys()
         
 
    
         
         
-    def __init_filesys(self,worker_dir):
+    def __init_filesys(self):
 
-        self.profile_dir = worker_dir+"profile/"
         utils.create_dir_if_not_exist(self.profile_dir)
                 
         if utils.does_file_exist(self.perm_memory_path): 
