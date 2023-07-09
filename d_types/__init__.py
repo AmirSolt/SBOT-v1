@@ -13,17 +13,22 @@ class State:
     def get_all_states(cls):
         attrs = dir(cls)
         return [attr for attr in attrs if not attr.startswith('__')]
-    
-class Action:
-    
-    def __init__(self) -> None:
-        pass
-    
-    
-    def ask_help(self):
-        print("HELP!~!!!!!!!!!")
-        
-        
+
+
+
+
+
+
+
     
 class ParsedForm:
+    pass
+
+
+
+
+class QuestionTypes:
+    pass
+
+class InputTypes:
     pass

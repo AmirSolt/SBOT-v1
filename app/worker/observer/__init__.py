@@ -23,7 +23,7 @@ class Observer:
         
     
     
-    def get_current_states(self, screenshot_path:str, page_html:str)->str:
+    def get_current_state(self, screenshot_path:str, page_html:str)->str:
         state:str = State.unknown
         
         target_embedding = AI.embed_image(screenshot_path)
