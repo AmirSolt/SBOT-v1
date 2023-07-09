@@ -23,19 +23,20 @@ class StateSolver:
         match state:
             
             case State.login:
-                self.actor.act(browser)
+                self.actor.ask_help()
                 
             case State.menu:
-                self.actor.act(browser)
+                profile.reset_survey_memory()
+                self.actor.ask_help()
                 
             case State.popup:
-                self.actor.act(browser)
+                self.actor.ask_help()
                 
             case State.form:
-                self.actor.act(browser)
+                self.actor.form_act(browser, profile, page_html)
                 
             case State.unknown:
-                self.actor.act(browser)
+                self.actor.ask_help()
                 
 
             case _:

@@ -16,19 +16,23 @@ class State:
 
 
 
-
+class PFGTypeException(Exception):
+    pass
 
 
 
     
-class ParsedForm:
-    pass
+class ParsedFormGroup:
+    
+    def __init__(self, question:str, inputs:list[str]) -> None:
+        self.question = question
+        self.inputs = inputs
+        # path
+        # type of input
+        # answer
+        # answer_index
 
 
 
-
-class QuestionTypes:
-    pass
-
-class InputTypes:
+class ParsedInput:
     pass
