@@ -14,6 +14,7 @@ class StateSolver:
         self.actor = Actor()
     
     def solve(self, browser:Browser, profile:Profile, screenshot_path:str, page_html:str)->None:
+        print("Solving the current state")
         
 
         

@@ -31,6 +31,9 @@ class Worker:
     
     def tick(self)->None:
         
+        input("Next tick")
+        
+        
         vacuum.clean_old_files(self.worker_id)
         
         pauser.pause()
@@ -42,7 +45,6 @@ class Worker:
         self.state_solver.solve(self.browser, self.profile, screenshot_path, page_html)
 
 
-        input("Next tick")
 
     
     

@@ -12,7 +12,9 @@ import torch
 
 def embed_str(text:str)->list[float]:
     model = INSTRUCTOR('hkunlp/instructor-base')
-    embeddings = model.encode(text)
+    return model.encode(text)
+    
+    
 
 
 def embed_image(image_path:str)->list[float]:
@@ -81,6 +83,8 @@ def recommendations_from_embeddings(
    query_embedding = target_embedding.reshape(1, -1)
 
    distances, indices_of_nearest_neighbors = knn.kneighbors(query_embedding, return_distance=True)
+   
+   print(f"Similarity scores: {distances}")
    
    filtered_indices = indices_of_nearest_neighbors[0][ (1-distances[0]) > distance_threshold]
    

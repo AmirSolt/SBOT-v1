@@ -18,7 +18,12 @@ def create_dir_if_not_exist(path):
 def does_file_exist(filename):
     return os.path.isfile(filename)
         
-        
+
+def get_filename(path:str)->str:
+    return os.path.basename(path)
+
+
+
         
 
 supported_files = ["json", "pickle", "html"]
@@ -46,7 +51,7 @@ def read_file(path:str):
         print(f"Cannot read {ext} filetype.")
 
 def write_html(path, content):
-    with open(path, 'w') as file:
+    with open(path, 'w', encoding="utf-8") as file:
         file.write(content)
 
 def read_html(path):

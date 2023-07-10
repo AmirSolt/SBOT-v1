@@ -26,6 +26,8 @@ class Observer:
     
     
     def get_current_state(self, screenshot_path:str, page_html:str)->str:
+        print("Getting current state")
+        
         state:str = State.unknown
         
         target_embedding = AI.embed_image(screenshot_path)
@@ -41,7 +43,7 @@ class Observer:
     
     
     def __get_state_from_path(self, image_path:str):
-        filename = image_path.split("/")[-1]
+        filename = utils.get_filename(image_path)
         code = filename.split("_")[0]
         
         if not code in State.get_all_states():

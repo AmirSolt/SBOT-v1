@@ -4,6 +4,7 @@ import undetected_chromedriver as uc
 from helper import utils, config
 import time
 import os
+from selenium.webdriver.chrome.options import Options
 
 
 class Browser(uc.Chrome):
@@ -18,14 +19,21 @@ class Browser(uc.Chrome):
         self.cookies_dir = config.BROWSER_COOKIES_DIR.format(worker_id=worker_id)
         self.cookies_path = config.BROWSER_COOKIES_FILE.format(worker_id=worker_id)
         
-        
-        
-
+        options = self.__get_options()
         super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
+        
         
         
         self.__init_filesys()
 
+
+    def __get_options(self):
+        options = Options()
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--start-maximized")
+        options.page_load_strategy = 'eager'
+        return options        
     
     def __init_filesys(self):
 
