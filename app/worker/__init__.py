@@ -40,7 +40,7 @@ class Worker:
         
         pauser.pause()
               
-        screenshot_path = self.browser.get_current_screenshot_path()
+        # screenshot_path = self.browser.get_current_screenshot_path()
         page_html = self.browser.get_current_page_html()
         
         
