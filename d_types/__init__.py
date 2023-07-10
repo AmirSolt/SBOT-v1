@@ -32,6 +32,8 @@ class ParsedFormGroup:
         # answer
         # answer_index
 
+    def __repr__(self) -> str:
+        return f"question: {self.question} || inputs: {self.inputs}"
 
 
 class ParsedInput:

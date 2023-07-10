@@ -5,6 +5,12 @@ from helper import utils, config
 import time
 import os
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+
+
 
 
 class Browser(uc.Chrome):
@@ -29,8 +35,6 @@ class Browser(uc.Chrome):
 
     def __get_options(self):
         options = Options()
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("--disable-gpu")
         options.add_argument("--start-maximized")
         options.page_load_strategy = 'eager'
         return options        
@@ -43,8 +47,6 @@ class Browser(uc.Chrome):
         utils.create_dir_if_not_exist(self.pages_dir)
                 
         if utils.does_file_exist(self.cookies_path):
-            print("====**  Cookies are silent **====")
-            return 
             self.__load_cookies()
     
     
@@ -59,6 +61,9 @@ class Browser(uc.Chrome):
         self.__save_page_html(page_html)
         return page_html
     
+    def wait_till_page_loads(self):
+        WebDriverWait(self, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+    
     
     def kill(self):
         """
@@ -71,6 +76,8 @@ class Browser(uc.Chrome):
 
     
     def __save_screenshot(self, image_path:str):
+        self.wait_till_page_loads()
+        
         self.get_screenshot_as_file(image_path)
     
     def __save_page_html(self, page_html:str):
@@ -89,7 +96,15 @@ class Browser(uc.Chrome):
                 cookies = pickle.load(f)
         
         if cookies:
+            current_time = time.time()
             for cookie in cookies:
+                if not ("domain" in cookie and cookie["domain"] == self.current_url.split("//")[-1].split("/")[0]):
+                    continue
+                    
+                if 'expiry' in cookie:
+                    if current_time > cookie['expiry']:
+                        continue
+                    
                 self.add_cookie(cookie)
             
 

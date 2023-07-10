@@ -31,8 +31,10 @@ class Worker:
     
     def tick(self)->None:
         
+        
         input("Next tick")
         
+        print("========== tick starts ==========")
         
         vacuum.clean_old_files(self.worker_id)
         

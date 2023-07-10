@@ -34,7 +34,8 @@ class StateSolver:
                 self.actor.ask_help()
                 
             case State.form:
-                self.actor.form_act(browser, profile, page_html)
+                # self.actor.form_act(browser, profile, page_html)
+                self.actor.ask_help()
                 
             case State.unknown:
                 self.actor.ask_help()

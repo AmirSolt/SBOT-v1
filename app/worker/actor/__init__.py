@@ -21,21 +21,23 @@ class Actor:
         
         print("Form Act !!!")
         
-        # try:
+        try:
         
-        #     zoup = Zoup()
+            zoup = Zoup(page_html, "xml")
             
-        #     form_group:ParsedFormGroup = task_parser.form_group_parser(zoup)
+            print(zoup)
             
-        #     task_solver.solve_form_group(profile, form_group)
+            form_group:ParsedFormGroup = task_parser.get_parsed_form_group(zoup)
+            
+            task_solver.solve_form_group(profile, form_group)
             
       
-        #     # use browser to act the answer
+            # use browser to act the answer
             
-        # except PFGTypeException as e:
-        #     print("This form group type is not supported")
-        #     self.ask_help()
-        #     return None
+        except PFGTypeException as e:
+            print("This form group type is not supported")
+            self.ask_help()
+            return None
             
         
         
