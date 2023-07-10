@@ -1,5 +1,6 @@
 import os
-
+import pickle
+import json
 
 
 
@@ -18,14 +19,52 @@ def does_file_exist(filename):
     return os.path.isfile(filename)
         
         
-def save_file(path:str, content):
-    with open(path, "w") as file:
+        
+
+supported_files = ["json", "pickle", "html"]
+
+def write_file(path:str, content):
+    ext = os.path.splitext(path)[-1].lower()[1:]
+    if ext=="html":
+        write_html(path, content)
+    elif ext=="json":
+        write_json(path, content)
+    elif ext=="pickle":
+        write_pickle(path, content)
+    else:
+        print(f"Cannot write {ext} filetype.")
+
+def read_file(path:str):
+    ext = os.path.splitext(path)[-1].lower()[1:]
+    if ext=="html":
+        return read_html(path)
+    elif ext=="json":
+        return read_json(path)
+    elif ext=="pickle":
+        return read_pickle(path)
+    else:
+        print(f"Cannot read {ext} filetype.")
+
+def write_html(path, content):
+    with open(path, 'w') as file:
         file.write(content)
-    return True
-  
-    
-def read_file(filename, extension):
-    with open(f"{filename}.{extension}", "r") as file:
-        content = file.read()
-    return content
-  
+
+def read_html(path):
+    with open(path, 'r') as file:
+        return file.read()
+
+def write_json(path, content):
+    with open(path, 'w') as file:
+        json.dump(content, file)
+
+def read_json(path):
+    with open(path, 'r') as file:
+        return json.load(file)
+
+def write_pickle(path, content):
+    with open(path, 'wb') as file:
+        pickle.dump(content, file)
+
+def read_pickle(path):
+    with open(path, 'rb') as file:
+        return pickle.load(file)

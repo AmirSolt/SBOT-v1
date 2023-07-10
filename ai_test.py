@@ -1,30 +1,68 @@
-from urllib.request import urlopen
+
+
+import numpy as np
+from sklearn.neighbors import NearestNeighbors
+
+from InstructorEmbedding import INSTRUCTOR
 from PIL import Image
 import timm
+import torch
 
-img = Image.open(urlopen(
-    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'
-))
 
-model = timm.create_model(
-    'vgg19.tv_in1k',
-    pretrained=True,
-    num_classes=0,  # remove classifier nn.Linear
-)
-model = model.eval()
 
-# get model specific transforms (normalization, resize)
-data_config = timm.data.resolve_model_data_config(model)
-transforms = timm.data.create_transform(**data_config, is_training=False)
+def get_similar_items(items:list, embeddings:list[list[float]], target:list[float], threshold:float, method:str):
+    indecies = get_similar_indecies(embeddings, target, threshold, method)
+    return [items[i] for i in indecies]
 
-output = model(transforms(img).unsqueeze(0))  # output is (batch_size, num_features) shaped tensor
 
-# or equivalently (without needing to set num_classes=0)
+def get_similar_indecies(embeddings:list[list[float]], target:list[float], threshold:float, method:str)->list[int]:
+    
+    array_embeddings = np.array(embeddings, dtype="float32")
+    target_embeddings = np.array(target, dtype="float32")
+    
+    result_indecies = recommendations_from_embeddings(array_embeddings, target_embeddings, threshold, method)
+    
+    return result_indecies.tolist()
 
-output = model.forward_features(transforms(img).unsqueeze(0))
-# output is unpooled, a (1, 512, 7, 7) shaped tensor
 
-output = model.forward_head(output, pre_logits=True)
-# output is a (1, num_features) shaped tensor
 
-print(output)
+def recommendations_from_embeddings(
+   array_embeddings: np.ndarray,
+   target_embedding: np.ndarray,
+   distance_threshold:float,
+   distance_metric: str ,
+) -> np.ndarray:
+
+   # create KNN object using scikit-learn
+   if distance_metric == "cosine":
+      knn = NearestNeighbors(n_neighbors=len(array_embeddings), metric="cosine", n_jobs=-1)
+   else:
+      knn = NearestNeighbors(n_neighbors=len(array_embeddings), metric="euclidean", algorithm="ball_tree", n_jobs=-1)
+
+   # fit embeddings to KNN object
+   knn.fit(array_embeddings)
+
+   # get the embedding of the source string
+   query_embedding = target_embedding.reshape(1, -1)
+
+   # search for nearest neighbors using KNN object
+   distances, indices_of_nearest_neighbors = knn.kneighbors(query_embedding, return_distance=True)
+   # indices_of_nearest_neighbors = indices_of_nearest_neighbors
+   
+   print(f"Similarity scores: {distances}")
+   
+   filtered_indices = indices_of_nearest_neighbors[0][ (1-distances[0]) > distance_threshold]
+   
+
+   return filtered_indices
+
+
+model = INSTRUCTOR('hkunlp/instructor-base')
+
+search_text = "thriller chris hemsworth"
+texts = ["sdqwd", 'thats righ', "thriller chris hemsworth"]
+
+embeddings = [model.encode(text) for text in texts]
+search_embedding = model.encode(search_text, normalize_embeddings=True)
+r = get_similar_items(texts, embeddings, search_embedding, 0.9, "cosine")
+print(r)

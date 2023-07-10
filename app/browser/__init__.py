@@ -3,7 +3,7 @@ import pickle
 import undetected_chromedriver as uc
 from helper import utils, config
 import time
-
+import os
 
 
 class Browser(uc.Chrome):
@@ -18,16 +18,14 @@ class Browser(uc.Chrome):
         self.cookies_dir = config.BROWSER_COOKIES_DIR.format(worker_id=worker_id)
         self.cookies_path = config.BROWSER_COOKIES_FILE.format(worker_id=worker_id)
         
+        
+        
 
         super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
         
         
         self.__init_filesys()
-        
-        
 
-    
-    
     
     def __init_filesys(self):
 
@@ -36,7 +34,9 @@ class Browser(uc.Chrome):
         utils.create_dir_if_not_exist(self.screenshots_dir)
         utils.create_dir_if_not_exist(self.pages_dir)
                 
-        if utils.does_file_exist(self.cookies_path): 
+        if utils.does_file_exist(self.cookies_path):
+            print("====**  Cookies are silent **====")
+            return 
             self.__load_cookies()
     
     
@@ -54,10 +54,10 @@ class Browser(uc.Chrome):
     
     def kill(self):
         """
-        Saves cookies and Kills the browser with quit()
+        Saves cookies and Kills the browser with close()
         """
         self.__save_cookies()
-        self.quit()
+        self.close()
     
     
 
@@ -67,7 +67,7 @@ class Browser(uc.Chrome):
     
     def __save_page_html(self, page_html:str):
         path = self.pages_dir+str(int(time.time()))+".html"
-        utils.save_file(path, page_html)
+        utils.write_file(path, page_html)
     
     
   
@@ -75,8 +75,10 @@ class Browser(uc.Chrome):
 
     def __load_cookies(self):
         cookies = None
-        with open(self.cookies_path, 'rb') as f:
-            cookies = pickle.load(f)
+        
+        if os.path.getsize(self.cookies_path) > 0:   
+            with open(self.cookies_path, 'rb') as f:
+                cookies = pickle.load(f)
         
         if cookies:
             for cookie in cookies:

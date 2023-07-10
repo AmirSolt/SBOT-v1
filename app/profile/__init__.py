@@ -29,6 +29,12 @@ class Profile:
         
         self.__init_filesys()
         
+        if len(self.perm_memory) > 0:
+            print("Profile memory loaded")
+        else:
+            raise Exception("Perm memory is empty")
+            
+        
 
    
         
@@ -44,7 +50,7 @@ class Profile:
         
         if not self.perm_memory:
             self.__generate_perm_memory()
-            utils.save_file(self.perm_memory_path, self.perm_memory)
+            utils.write_file(self.perm_memory_path, self.perm_memory)
         
         
     def get_context(self, text:str)->list[str]:
@@ -66,7 +72,7 @@ class Profile:
         returns memory items close to target_embedding
         """
         embeddings = [memory_item["embedding"] for memory_item in memory]
-        memory_items = AI.get_similar_items(memory, embeddings, target_embedding)
+        memory_items = AI.get_similar_items(memory, embeddings, target_embedding, 0.85, "cosine")
         return memory_items
         
         
@@ -83,8 +89,12 @@ class Profile:
         
 
     def __generate_perm_memory(self):
-        # email
-        # print password
+        print("========")
+        email = input("Email:")
+        password = input("Password:")
+        print("========")
+        self.__add_to_perm_memory("email", email)
+        self.__add_to_perm_memory("password", password)
         self.__add_to_perm_memory("what is your first name?", "jack")
         
     
@@ -102,8 +112,8 @@ class Profile:
     
 
     def kill(self):
-        utils.save_file(self.perm_memory_path, self.perm_memory)
-        utils.save_file(self.survey_memory_path, self.survey_memory)
+        utils.write_file(self.perm_memory_path, self.perm_memory)
+        utils.write_file(self.survey_memory_path, self.survey_memory)
     
     
     

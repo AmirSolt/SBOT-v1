@@ -10,6 +10,10 @@ prob_break_pause = 0.02
 
 
 def pause():
+    
+    print("====  Pauser is silent ===")
+    return 
+    
 
     chance = random.random()
 
@@ -19,5 +23,7 @@ def pause():
         pause_duration = long_pause * (0.5 + random.random()) 
     else:
         pause_duration = short_pause * (0.5 + random.random()) 
+
+    print(f"waiting for {int(pause_duration)}s")
 
     time.sleep(pause_duration)

@@ -19,22 +19,23 @@ class Actor:
     
     def form_act(self, browser:Browser, profile:Profile, page_html:str):
         
+        print("Form Act !!!")
         
-        try:
+        # try:
         
-            zoup = Zoup()
+        #     zoup = Zoup()
             
-            form_group:ParsedFormGroup = task_parser.form_group_parser(zoup)
+        #     form_group:ParsedFormGroup = task_parser.form_group_parser(zoup)
             
-            task_solver.solve_form_group(profile, form_group)
+        #     task_solver.solve_form_group(profile, form_group)
             
       
-            # use browser to act the answer
+        #     # use browser to act the answer
             
-        except PFGTypeException as e:
-            print("This form group type is not supported")
-            self.ask_help()
-            return None
+        # except PFGTypeException as e:
+        #     print("This form group type is not supported")
+        #     self.ask_help()
+        #     return None
             
         
         

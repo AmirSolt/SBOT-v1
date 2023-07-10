@@ -9,9 +9,10 @@ from d_types import State
 from helper import utils, config
 from funcs import pauser, vacuum
 
+
+
 class Worker:
     
-
 
     def __init__(self, worker_id:str) -> None:
         
@@ -20,7 +21,7 @@ class Worker:
         utils.create_dir_if_not_exist(self.worker_dir)
         
         
-        self.browser = Browser(self.worker_id, headless=False)
+        self.browser = Browser(self.worker_id, headless=False, use_subprocess=True)
         self.profile = Profile(self.worker_id)
 
         self.state_solver = StateSolver()
@@ -40,7 +41,8 @@ class Worker:
         
         self.state_solver.solve(self.browser, self.profile, screenshot_path, page_html)
 
-    
+
+        input("Next tick")
 
     
     
