@@ -11,6 +11,8 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 
 
+INVIS_ELEMENTS_SCRIPT = 'function getUniqueCssPath(e){if(!e||e.nodeType!==Node.ELEMENT_NODE)return"";let i=[];for(;e.nodeType===Node.ELEMENT_NODE&&"html"!==e.nodeName.toLowerCase();){let t=e.nodeName.toLowerCase()+(e.id?`#${e.id}`:"")+(e.className&&"string"==typeof e.className?"."+e.className.trim().replace(/\s+/g,"."):"");i.unshift(t),e=e.parentNode}return i.join(" > ")}function isElementInvisible(e){let i=e.getBoundingClientRect();if(!(i.width>0&&i.height>0))return!0;let t=window.getComputedStyle(e);return"none"===t.display||"hidden"===t.visibility}function getInvisibleChildren(e){return Array.from(e.children).filter(e=>isElementInvisible(e))}let invisibleElements=getInvisibleChildren(document.body),invisibleSelectors=invisibleElements.map(getUniqueCssPath); return invisibleSelectors;'
+
 
 
 class Browser(uc.Chrome):
@@ -52,6 +54,7 @@ class Browser(uc.Chrome):
     
     
     def get_current_screenshot_path(self)->str:
+        print("taking a screenshot")
         path =  self.screenshots_dir+ str(int(time.time()))+".png"
         self.__save_screenshot(path)
         return path
@@ -64,6 +67,8 @@ class Browser(uc.Chrome):
     def wait_till_page_loads(self):
         WebDriverWait(self, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
     
+    def get_invis_elements_paths(self):
+        return self.execute_script(INVIS_ELEMENTS_SCRIPT)
     
     def kill(self):
         """

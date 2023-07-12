@@ -55,7 +55,7 @@ def write_html(path, content):
         file.write(content)
 
 def read_html(path):
-    with open(path, 'r') as file:
+    with open(path, 'r', encoding="utf-8") as file:
         return file.read()
 
 def write_json(path, content):

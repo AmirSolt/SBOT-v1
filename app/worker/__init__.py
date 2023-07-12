@@ -40,11 +40,17 @@ class Worker:
         
         pauser.pause()
               
-        # screenshot_path = self.browser.get_current_screenshot_path()
         page_html = self.browser.get_current_page_html()
+        screenshot_path = self.browser.get_current_screenshot_path()
+        
+        # invis_paths = self.browser.get_invis_elements_paths()
+        
+        # html, invis => func => zoup groups
+        # zoup groups => func => state
         
         
-        self.state_solver.solve(self.browser, self.profile, screenshot_path, page_html)
+        
+        # self.state_solver.solve(self.browser, self.profile, screenshot_path, page_html)
 
 
 

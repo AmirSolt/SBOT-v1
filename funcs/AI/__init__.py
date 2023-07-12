@@ -11,8 +11,9 @@ import torch
 
 
 def embed_str(text:str)->list[float]:
-    model = INSTRUCTOR('hkunlp/instructor-base')
-    return model.encode(text)
+    # model = INSTRUCTOR('hkunlp/instructor-base')
+    # return model.encode(text)
+    return None
     
     
 
