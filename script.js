@@ -1,14 +1,21 @@
+
+
 function getUniqueCssPath(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) {
         return '';
     }
     const path = [];
     while (el.nodeType === Node.ELEMENT_NODE && el.nodeName.toLowerCase() !== 'html') {
-        const selector = el.nodeName.toLowerCase() +
-            (el.id ? `#${el.id}` : '') +
-            (el.className && typeof el.className === 'string'
-                ? '.' + el.className.trim().replace(/\s+/g, ".")
-                : '');
+        let selector = el.nodeName.toLowerCase();
+        if (el.parentNode) {
+            const siblings = Array.from(el.parentNode.children);
+            const sameTagSiblings = siblings.filter(sibling => sibling.nodeName.toLowerCase() === selector);
+            if (sameTagSiblings.length > 1) {
+                selector += `:nth-child(${siblings.indexOf(el) + 1})`;
+            }
+        }
+        selector += el.id ? `#${el.id}` : '';
+        selector += el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, ".") : '';
         path.unshift(selector);
         el = el.parentNode;
     }
@@ -42,16 +49,23 @@ function getZIndex(el) {
 }
 
 
-
-function getChildrenInfo(parent) {
+function getChildrenInfo(parent, context_path="") {
     let children = Array.from(parent.children).map(el=>{
         let rect = el.getBoundingClientRect();
         if(!isElementVisible(el, rect)){
             return null
         }
-        // switch context if iframe
+
+        let context = el
+        let children_context_path = "";
+        if(el.tagName == "IFRAME"){
+            let iframeContent = el.contentWindow.document;
+            context = iframeContent.body;
+            children_context_path = getUniqueCssPath(el)
+        }
+
         return {
-            iframe_path:"",
+            iframe_path:context_path,
             path: getUniqueCssPath(el),
             name: el.tagName,
             width: rect.width,
@@ -60,7 +74,7 @@ function getChildrenInfo(parent) {
             text: getElementText(el).trim(),
             allText: el.innerText,
             z_index: getZIndex(el),
-            children: getChildrenInfo(el)
+            children: getChildrenInfo(context, children_context_path)
         }
 
     })
@@ -73,5 +87,3 @@ let elementsInfo = getChildrenInfo(document.body);
 console.log(elementsInfo)
 
 
-
-//   var iframeContent = iframe.contentWindow.document;

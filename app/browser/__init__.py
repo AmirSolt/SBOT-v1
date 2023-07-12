@@ -37,6 +37,7 @@ class Browser(uc.Chrome):
 
     def __get_options(self):
         options = Options()
+        options.add_argument("--disable-web-security")
         options.add_argument("--start-maximized")
         options.page_load_strategy = 'eager'
         return options        
