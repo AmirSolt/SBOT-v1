@@ -9,38 +9,13 @@ import torch
 
 
 
+# model = INSTRUCTOR('hkunlp/instructor-base')
 
 def embed_str(text:str)->list[float]:
-    # model = INSTRUCTOR('hkunlp/instructor-base')
     # return model.encode(text)
     return None
     
     
-
-
-def embed_image(image_path:str)->list[float]:
-    img = Image.open(image_path).convert('RGB')
-
-    model = timm.create_model(
-        'vgg19.tv_in1k',
-        pretrained=True,
-        num_classes=0,  # remove classifier nn.Linear
-    )
-    
-    model = model.eval()
-    data_config = timm.data.resolve_model_data_config(model)
-    transforms = timm.data.create_transform(**data_config, is_training=False)
-    
-    output = model(transforms(img).unsqueeze(0))
-    output = model.forward_features(transforms(img).unsqueeze(0))
-    output = model.forward_head(output, pre_logits=True)
-    
-    output = torch.flatten(output)
-    output = output.tolist()
-    
-    return output
-
-
 
 
 

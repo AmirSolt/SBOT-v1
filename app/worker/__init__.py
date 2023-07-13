@@ -3,7 +3,6 @@ from ..browser import Browser
 from ..profile import Profile
 
 
-from .state_solver import StateSolver
 
 from d_types import State
 from helper import utils, config
@@ -24,7 +23,6 @@ class Worker:
         self.browser = Browser(self.worker_id, headless=False, use_subprocess=True)
         self.profile = Profile(self.worker_id)
 
-        self.state_solver = StateSolver()
         
     
     
@@ -32,25 +30,15 @@ class Worker:
     def tick(self)->None:
         
         
-        input("Next tick")
         
         print("========== tick starts ==========")
         
         vacuum.clean_old_files(self.worker_id)
         
-        pauser.pause()
+        # print("====  Test Pause ===")
+        pauser.test_pause()
               
-        page_html = self.browser.get_current_page_html()
-        screenshot_path = self.browser.get_current_screenshot_path()
-        
-        # invis_paths = self.browser.get_invis_elements_paths()
-        
-        # html, invis => func => zoup groups
-        # zoup groups => func => state
-        
-        
-        
-        # self.state_solver.solve(self.browser, self.profile, screenshot_path, page_html)
+        parsed_html = self.browser.get_parsed_html()
 
 
 

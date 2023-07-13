@@ -47,7 +47,9 @@ function isElementVisible(el, rect) {
 function getZIndex(el) {
     return parseInt(el.style.zIndex ? el.style.zIndex : 0)
 }
+function verifyIframe(el){
 
+}
 
 function getChildrenInfo(parent, context_path="") {
     let children = Array.from(parent.children).map(el=>{
@@ -59,9 +61,13 @@ function getChildrenInfo(parent, context_path="") {
         let context = el
         let children_context_path = "";
         if(el.tagName == "IFRAME"){
+            try {
             let iframeContent = el.contentWindow.document;
             context = iframeContent.body;
             children_context_path = getUniqueCssPath(el)
+            }catch(e){
+                return null
+            }
         }
 
         return {

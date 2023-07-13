@@ -1,7 +1,6 @@
 script = """
 
 
-
 function getUniqueCssPath(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) {
         return '';
