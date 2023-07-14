@@ -7,12 +7,15 @@ import os
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.remote.webelement import WebElement
 
 
-INVIS_ELEMENTS_SCRIPT = 'function getUniqueCssPath(e){if(!e||e.nodeType!==Node.ELEMENT_NODE)return"";let t=[];for(;e.nodeType===Node.ELEMENT_NODE&&"html"!==e.nodeName.toLowerCase();){let n=e.nodeName.toLowerCase();if(e.parentNode){let i=Array.from(e.parentNode.children),l=i.filter(e=>e.nodeName.toLowerCase()===n);l.length>1&&(n+=`:nth-child(${i.indexOf(e)+1})`)}n+=e.id?`#${e.id}`:"",n+=e.className&&"string"==typeof e.className?"."+e.className.trim().replace(/\s+/g,"."):"",t.unshift(n),e=e.parentNode}return t.join(" > ")}function getAllAttrs(e){let t={};for(let n=0;n<e.attributes.length;n++)t[e.attributes[n].name]=e.attributes[n].value;return t}function getElementText(e){let t="";for(let n=0;n<e.childNodes.length;n++)3===e.childNodes[n].nodeType&&(t+=e.childNodes[n].nodeValue);return t}function isElementVisible(e,t){if(!(t.width>0&&t.height>0))return!1;let n=window.getComputedStyle(e);return"none"!==n.display&&"hidden"!==n.visibility}function getZIndex(e){return parseInt(e.style.zIndex?e.style.zIndex:0)}function verifyIframe(e){}function getChildrenInfo(e,t=""){return Array.from(e.children).map(e=>{let n=e.getBoundingClientRect();if(!isElementVisible(e,n))return null;let i=e,l="";if("IFRAME"==e.tagName)try{i=e.contentWindow.document.body,l=getUniqueCssPath(e)}catch(r){return null}return{iframe_path:t,path:getUniqueCssPath(e),name:e.tagName,width:n.width,height:n.height,attrs:getAllAttrs(e),text:getElementText(e).trim(),allText:e.innerText,z_index:getZIndex(e),children:getChildrenInfo(i,l)}}).filter(e=>e)}let elementsInfo=getChildrenInfo(document.body);return elementsInfo'
+from selenium.webdriver.support.color import Color
 
+PARSER_ELEMENTS_SCRIPT = 'function getUniqueCssPath(e){if(!e||e.nodeType!==Node.ELEMENT_NODE)return"";let t=[];for(;e.nodeType===Node.ELEMENT_NODE&&"html"!==e.nodeName.toLowerCase();){let n=e.nodeName.toLowerCase();if(e.parentNode){let i=Array.from(e.parentNode.children),l=i.filter(e=>e.nodeName.toLowerCase()===n);l.length>1&&(n+=`:nth-child(${i.indexOf(e)+1})`)}n+=e.id?`#${e.id}`:"",n+=e.className&&"string"==typeof e.className?"."+e.className.trim().replace(/\s+/g,"."):"",t.unshift(n),e=e.parentNode}return t.join(" > ")}function getAllAttrs(e){let t={};for(let n=0;n<e.attributes.length;n++)t[e.attributes[n].name]=e.attributes[n].value;return t}function getElementText(e){let t="";for(let n=0;n<e.childNodes.length;n++)3===e.childNodes[n].nodeType&&(t+=e.childNodes[n].nodeValue);return t}function isElementVisible(e,t){if(!(t.width>0&&t.height>0))return!1;let n=window.getComputedStyle(e);return"none"!==n.display&&"hidden"!==n.visibility}function getZIndex(e){return parseInt(e.style.zIndex?e.style.zIndex:0)}function verifyIframe(e){}function getChildrenInfo(e,t=""){return Array.from(e.children).map(e=>{let n=e.getBoundingClientRect();if(!isElementVisible(e,n))return null;let i=e,l="";if("IFRAME"==e.tagName)try{i=e.contentWindow.document.body,l=getUniqueCssPath(e)}catch(r){return null}return{iframe_path:t,path:getUniqueCssPath(e),name:e.tagName,width:n.width,height:n.height,attrs:getAllAttrs(e),text:getElementText(e).trim(),allText:e.innerText,z_index:getZIndex(e),children:getChildrenInfo(i,l)}}).filter(e=>e)}let elementsInfo=getChildrenInfo(document.body);return elementsInfo'
+HIGHLIGHT_SCRIPT = 'let target=document.querySelector(arguments[0]);target.style.borderColor=arguments[1],target.style.borderStyle="solid";var container=document.createElement("div");container.style.position="relative";var label=document.createElement("div");label.textContent=arguments[2],label.style.position="absolute",label.style.top="-40px",label.style.left="0",label.style.borderColor="red",label.style.borderStyle="solid",container.insertBefore(label,container.firstChild),target.insertBefore(container,target.firstChild);'
 
 
 class Browser(uc.Chrome):
@@ -46,14 +49,41 @@ class Browser(uc.Chrome):
     def __init_filesys(self):
 
         utils.create_dir_if_not_exist(self.browser_dir)
-        
-        
-        
                 
         if utils.does_file_exist(self.cookies_path):
             self.__load_cookies()
     
     
+    
+    def find_elements(self, selector_path:str, iframe_path:str)->list[WebElement]:
+        
+        if iframe_path:
+            iframe = self.find_element(iframe_path, "")
+            self.switch_to.frame(iframe)
+            
+            
+        elements = []  
+        try:
+            elements = self.find_elements(By.CSS_SELECTOR, selector_path)
+        except NoSuchElementException:
+            elements = []
+
+        
+        self.switch_to.default_content()
+        
+        return elements
+    
+    
+    def highlight_element(self, selector_path:str, iframe_path:str, color:str, label:str)->bool:
+        if iframe_path:
+            iframe = self.find_element(iframe_path, "")
+            self.switch_to.frame(iframe)
+            
+        self.execute_script(HIGHLIGHT_SCRIPT, selector_path, color, label )
+    
+        self.switch_to.default_content()
+        
+
     
     def get_current_screenshot_path(self)->str:
         print("taking a screenshot")
@@ -68,7 +98,7 @@ class Browser(uc.Chrome):
         return page_html
     
     def get_parsed_html(self):
-        parsed_html = self.execute_script(INVIS_ELEMENTS_SCRIPT)
+        parsed_html = self.execute_script(PARSER_ELEMENTS_SCRIPT)
         utils.create_dir_if_not_exist(self.parsed_html_dir)
         self.__save_parsed_html(parsed_html)
         return parsed_html

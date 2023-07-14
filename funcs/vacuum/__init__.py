@@ -6,8 +6,9 @@ import glob
 
 def clean_old_files(worker_id:str):
     dirs = [
-        config.BROWSER_SCREENSHOTS_DIR.format(worker_id=worker_id),
-        config.BROWSER_PAGES_DIR.format(worker_id=worker_id)
+        # config.BROWSER_SCREENSHOTS_DIR.format(worker_id=worker_id),
+        # config.BROWSER_PAGES_DIR.format(worker_id=worker_id),
+        config.BROWSER_PARSED_HTML_DIR.format(worker_id=worker_id),
     ]
 
     for dir in dirs:

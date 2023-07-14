@@ -4,7 +4,6 @@ from ..profile import Profile
 
 
 
-from d_types import State
 from helper import utils, config
 from funcs import pauser, vacuum
 
