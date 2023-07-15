@@ -105,7 +105,7 @@ function getParsedHtml(document, context_path){
 
     // filterNonFocusedElements()
     
-    let parsed_elements = elements.map(el=>{
+    let parsed_elements = Array.from(elements).map(el=>{
         const rect = el.getBoundingClientRect();
  
         return {
