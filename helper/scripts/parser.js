@@ -107,6 +107,9 @@ function getParsedHtml(document, context_path){
     
     let parsed_elements = Array.from(elements).map(el=>{
         const rect = el.getBoundingClientRect();
+
+        if(!isElementVisible(el, rect))
+            return null
  
         return {
             context_path:context_path,
