@@ -43,7 +43,7 @@ function getAllAttrs(el) {
     return attributes
 }
 function getAllStyles(el){
-    const styles = window.getComputedStyle(element);
+    const styles = window.getComputedStyle(el);
     const stylesObject = {};
     for (let i = 0; i < styles.length; i++) {
       const property = styles[i];
@@ -134,7 +134,7 @@ let parsed_elements = []
 
 parsed_elements.push(...getParsedHtml(document, ""))
 
-getAllIframes.array.forEach(iframe => {
+Array.from(getAllIframes(document)).forEach(iframe => {
     try {
         let iframeContent = iframe.contentWindow.document;
         context_path = getUniqueCssPath(iframe)
