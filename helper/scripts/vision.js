@@ -90,8 +90,12 @@ function getGroupElementScore(el, bodyRect){
     if(!isSpatial(el, rect))
         return 0
 
+    // if no all_text return 0
+
     const style = window.getComputedStyle(el);
 
+
+    // get score for innerHTML volume
     const hierarchyScore = getHierarchyScore(style);
     const posScore = getGroupPosScore(rect, bodyRect);
     const areaScore = getGroupAreaScore(rect, bodyRect);
