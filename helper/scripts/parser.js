@@ -43,7 +43,7 @@ function getAllAttrs(el) {
     return attributes
 }
 function getAllStyles(el){
-    const styles = window.getComputedStyle(element);
+    const styles = window.getComputedStyle(el);
     const stylesObject = {};
     for (let i = 0; i < styles.length; i++) {
       const property = styles[i];
@@ -72,43 +72,26 @@ function getCenterness(rectEl, rectBody) {
 
 // ==================================
 
-
-
-function elementConditions(el, rect){
-
-    // is element tagged option
-    // is element visible
-    // is low vis
-
-    return true;
-}
-
-function specialTags(el){
+function isSpecialTag(el){
     if(el.tagName === "OPTION"){
         return true;
     }
     return false
 }
 
-
-
 function isElementVisible(el, rect) {
-    if (!(rect.width > 0 && rect.height > 0)) { return false }
+    if(isSpecialTag(el)) return true
+    if (!(rect.width > 0 && rect.height > 0)) return false
     let style = window.getComputedStyle(el);
-    if (style.display === 'none') { return false }
-    if (style.visibility === 'hidden') { return false }
+    if (style.display === 'none') return false
+    if (style.visibility === 'hidden') return false
     return true;
 }
 
-function isLowVisible(el){
-    // has filter or opacity < 1
-    // or it's being covered by it
-}
 
 function filterNonFocusedElements(){
-// filter covered or non visible elemnts
-if(!elementConditions(el))
-return null
+    // opacity filter
+    // being covered
 }
 
 // ==================================
@@ -120,14 +103,13 @@ function getParsedHtml(document, context_path){
 
     let bodyRect = document.body.getBoundingClientRect();
 
-
-    filterNonFocusedElements()
+    // filterNonFocusedElements()
     
-
-
-
-    let parsed_elements = elements.map(el=>{
+    let parsed_elements = Array.from(elements).map(el=>{
         const rect = el.getBoundingClientRect();
+
+        if(!isElementVisible(el, rect))
+            return null
  
         return {
             context_path:context_path,
@@ -155,7 +137,7 @@ let parsed_elements = []
 
 parsed_elements.push(...getParsedHtml(document, ""))
 
-getAllIframes.array.forEach(iframe => {
+Array.from(getAllIframes(document)).forEach(iframe => {
     try {
         let iframeContent = iframe.contentWindow.document;
         context_path = getUniqueCssPath(iframe)
