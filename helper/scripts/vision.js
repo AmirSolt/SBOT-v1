@@ -138,7 +138,7 @@ function getGroupElementScore(el, bodyInfo){
 }
 
 
-function getGroupElementsByContext(context){
+function getGroupElementsByContext(context, contextPath){
     let elements = context.body.querySelectorAll("*");
     let bodyInfo = {
         bodyRect: context.body.getBoundingClientRect(),
@@ -150,6 +150,7 @@ function getGroupElementsByContext(context){
 
         return {
             context:context,
+            contextPath:contextPath,
             element:el,
             score:getGroupElementScore(el, bodyInfo)
 
@@ -162,14 +163,15 @@ function getGroupElementsByContext(context){
 function getGroups(){
     let groups = []
 
-    const bodyGroups = getGroupElementsByContext(document)
+    const bodyGroups = getGroupElementsByContext(document, "")
     if(bodyGroups!=null)
         groups.push(...bodyGroups)
     
     Array.from(getAllIframes(document)).forEach(iframe => {
         try {
             let iframeContent = iframe.contentWindow.document;
-            const iframeGroups = getGroupElementsByContext(iframeContent)
+            const contextPath = getUniqueCssPath(iframe)
+            const iframeGroups = getGroupElementsByContext(iframeContent, contextPath)
             if(iframeGroups!=null)
                 groups.push(...iframeGroups)
         }catch(e){
