@@ -1,5 +1,21 @@
 
 
+
+
+
+
+
+
+class IElement{
+
+
+}
+class InputField extends IElement{
+
+
+}
+
+
 function isLowVis(style) {
     let filter = style.filter;
     let opacity = style.opacity;
@@ -10,3 +26,13 @@ function isLowVis(style) {
         return false;
     }
 }
+
+
+function getIElement(el){
+
+}
+
+function getTextElement(el){
+
+}
+
