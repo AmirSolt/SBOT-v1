@@ -3,8 +3,8 @@
 function getGroups(contextPath, floorPath, segments){
     const context = getContextObj(contextPath)
     const floor = getFloorObj(context, floorPath)
-    
 
+    segments
 }
 
 function getFloorSegments(contextPath, floorPath){
@@ -24,9 +24,7 @@ function getFloorSegments(contextPath, floorPath){
     return segments
 }
 
-function highlightSegments(segments){
 
-}
 
 
 function getFloorObj(context, floorPath){
@@ -121,14 +119,32 @@ class Segment{
     constructor(element){
         this.element = element
         this.name = ""
+        rect =  element.getBoundingClientRect()
+        this.x = rect.left
+        this.y = rect.top
+        this.w = rect.width
+        this.h = rect.height
+        this.center = this.getCenter()
     }
     static isThisType(){
 
     }
+
+    getCenter(){
+        const centerX = this.x + this.w / 2;
+        const centerY = this.y + this.h / 2;
+        
+        return [centerX, centerY]
+    }
 }
 
 class IElement extends Segment{
+    constructor(element){
+        super(element);
+    }
+    static isThisType(){
 
+    }
 
 }
 
