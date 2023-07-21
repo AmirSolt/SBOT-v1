@@ -1,11 +1,36 @@
 
-const HIERARCHY_COEFFICIENT = 10;
-const AREA_COEFFICIENT = 5;
-const POS_COEFFICIENT = 10;
-// const INNERHTML_COEFFICIENT = 5;
+class Rect{
+    constructor(x,y,w,h){
+        this.x = x
+        this.y = y
+        this.w = w
+        this.h = h
+    }
+}
 
-const MIN_Floor_SCORE = 2.0;
+function highlightElement(target, color, text){
+    console.log(target)
+    // console.log(target.style)
+    target.style.borderColor = color;
+    target.style.borderStyle = 'solid';
+    var container = document.createElement('div');
+    container.style.position = 'relative'
+    var label = document.createElement('div');
+    
+    label.textContent = text;
+    label.style.position = 'absolute';
+    label.style.top = '-40px';
+    label.style.left = '0';
+    label.style.borderColor = color;
+    label.style.borderStyle = 'solid';
+    
+    container.insertBefore(label, container.firstChild)
+    target.insertBefore(container, target.firstChild);
+}
 
+
+
+// ====================================================================
 
 function getUniqueCssPath(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) {
@@ -26,29 +51,23 @@ function getUniqueCssPath(el) {
     }
     return path.join(' > ');
 }
-
-
 function getDistanceRatio(p0, p1, size){
     return Math.abs(p0 - p1)/size
 }
-
 function getRectCenter(x, y, w, h){
     const centerX = x + w / 2;
     const centerY = y + h / 2;
     
     return [centerX, centerY]
 }
-
 function distanceBetweenCenters(x0, y0, x1, y1) {
     const xDiff = x1 - x0;
     const yDiff = y1 - y0;
     return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
 }
-
 function getAllIframes(document){
     return document.querySelectorAll("iframe")
 }
-
 function indexOfMax(arr) {
     if (arr.length === 0) {
         return -1;
@@ -63,7 +82,6 @@ function indexOfMax(arr) {
     }
     return maxIndex;
 }
-
 function hasInnerText(el){
     if(el.innerText==null)
         return false
@@ -71,7 +89,6 @@ function hasInnerText(el){
         return true
     return false
 }
-
 function isSpatial(el, rect) {
     if (!(rect.width > 0 && rect.height > 0)) { return false }
     let style = window.getComputedStyle(el);
@@ -79,11 +96,9 @@ function isSpatial(el, rect) {
     if (style.visibility === 'hidden') { return false }
     return true;
 }
-
 function getRectArea(rect){
     return rect.width * rect.height
 }
-
 function getHierarchyScore(el, style) {
     const position = style.getPropertyValue('position');
     const zIndex = style.getPropertyValue('z-index');
@@ -110,14 +125,13 @@ function getHierarchyScore(el, style) {
 
     return order*HIERARCHY_COEFFICIENT;
 }
-
 function getFloorPosScore(rect){
     
     const [x, y] = getRectCenter(rect.left, rect.top, rect.width, rect.height);
-    const [sx, sy] = getRectCenter(0, 0, window.screen.width, window.screen.height);
+    const [sx, sy] = getRectCenter(screen.x, screen.y, screen.w, screen.h);
 
-    let xScore = getDistanceRatio(x, sx, window.screen.width);
-    let yScore = getDistanceRatio(y, sy, window.screen.height);
+    let xScore = getDistanceRatio(x, sx, screen.w);
+    let yScore = getDistanceRatio(y, sy, screen.h);
 
     xScore = 1-xScore
     yScore = 1-yScore
@@ -128,17 +142,13 @@ function getFloorAreaScore(rect, bodyRect){
     const areaRatio = getRectArea(rect)/getRectArea(bodyRect);
     return areaRatio * AREA_COEFFICIENT;
 }
-
 function getInnerHtmlScore(el, bodyHtmlSize){
     return (el.innerHTML.length / bodyHtmlSize) * INNERHTML_COEFFICIENT
 }
-
 function avgScore(numbers){
     const sum = numbers.reduce((a, b) => a + b, 0);
     return (sum / numbers.length) || 0;
 }
-
-
 function getFloorElementScore(el, bodyInfo){
 
     const rect = el.getBoundingClientRect();
@@ -160,8 +170,6 @@ function getFloorElementScore(el, bodyInfo){
     
     return avgScore(scores)
 }
-
-
 function getFloorElementsByContext(context, contextPath){
     let elements = context.body.querySelectorAll("*");
     let bodyInfo = {
@@ -181,8 +189,6 @@ function getFloorElementsByContext(context, contextPath){
     })
     return FloorInfos
 }
-
-
 function getFloors(){
     let Floors = []
 
@@ -204,54 +210,23 @@ function getFloors(){
 
     return Floors
 }
-
-
 function getOrderedFloors(Floors){
     return Floors.sort((a,b) => b.score - a.score)
 }
 
-function highlightElement(target, color, text){
-    console.log(target)
-    // console.log(target.style)
-    target.style.borderColor = color;
-    target.style.borderStyle = 'solid';
-    var container = document.createElement('div');
-    container.style.position = 'relative'
-    var label = document.createElement('div');
-    
-    label.textContent = text;
-    label.style.position = 'absolute';
-    label.style.top = '-40px';
-    label.style.left = '0';
-    label.style.borderColor = color;
-    label.style.borderStyle = 'solid';
-    
-    container.insertBefore(label, container.firstChild)
-    target.insertBefore(container, target.firstChild);
-}
+
+// ====================================================================
 
 
+const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
+const HIERARCHY_COEFFICIENT = 10;
+const AREA_COEFFICIENT = 5;
+const POS_COEFFICIENT = 10;
+const MIN_Floor_SCORE = 2.0;
 
+const floors = getFloors()
 
-function highlightFloor(){
-    const Floors = getFloors()
-
-    getOrderedFloors(Floors).slice(0,20).forEach((floor, i)=>{
-        if(floor["score"]>MIN_Floor_SCORE)
-            // highlightElement(floor["element"], "red", `${floor["score"].toFixed(2)}`)
-            highlightElement(floor["element"], "red", `${i}`)
-    })
-
-
-
-    // const FloorInfo = getOrderedFloorByIndex(Floors, orderIndex=0)
-    // highlightElement(FloorInfo["element"], "red", `${FloorInfo["score"].toFixed(2)}`)
-
-    // const FloorInfo1 = getOrderedFloorByIndex(Floors, orderIndex=1)
-    // highlightElement(FloorInfo1["element"], "green", `${FloorInfo1["score"].toFixed(2)}`)
-
-    // const FloorInfo2 = getOrderedFloorByIndex(Floors, orderIndex=2)
-    // highlightElement(FloorInfo2["element"], "blue", `${FloorInfo2["score"].toFixed(2)}`)
-}
-
-highlightFloor()
+getOrderedFloors(floors).slice(0,20).forEach((floor, i)=>{
+    if(floor["score"]>MIN_Floor_SCORE)
+        highlightElement(floor["element"], "red", `${i}`)
+})
