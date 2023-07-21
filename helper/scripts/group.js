@@ -4,13 +4,16 @@ class Rect{
         this.y = y
         this.w = w
         this.h = h
-        this.center = this.getCenter()
+        this.cx = this.x + this.w / 2;
+        this.cy = this.y + this.h / 2;
     }
-    getCenter(){
-        const centerX = this.x + this.w / 2;
-        const centerY = this.y + this.h / 2;
-        
-        return [centerX, centerY]
+    static get1DDistance(p0, p1){
+        return Math.abs(p0-p1)
+    }
+    static get2DDistance(x0, y0, x1, y1){
+        const xDiff = x1 - x0;
+        const yDiff = y1 - y0;
+        return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
     }
 }
 
@@ -20,23 +23,15 @@ class Segment{
     constructor(element){
         this.element = element
         this.name = ""
-        domRect =  element.getBoundingClientRect()
+        this.color = "white"
+
+        const domRect =  element.getBoundingClientRect()
         this.rect = new Rect(domRect.left, domRect.top, domRect.width, domRect.height)
     }
-    static isThisType(){
-
+    static isThisType(element){
+        throw new Error('==== Abstract class ====');
     }
 
-
-}
-
-class IElement extends Segment{
-    constructor(element){
-        super(element);
-    }
-    static isThisType(){
-
-    }
 
 }
 
@@ -45,6 +40,7 @@ class TextElement extends Segment{
         super(element);
         this.element = element
         this.name = "Text"
+        this.color = "green"
     }
     static isThisType(element){
         if(getElementText(element))
@@ -53,11 +49,36 @@ class TextElement extends Segment{
     }
 }
 
+class IElement extends Segment{
+    constructor(element){
+        super(element);
+        this.label = null
+        this.color = "blue"
+        this.cluster = null
+    }
+    isLabel(textElement){
+        throw new Error('==== Abstract class ====');
+    }
+    setLabel(textElement){
+        textElement.name = "Label"
+        textElement.color = "purple"
+        this.label = textElement
+    }
+    isClustter(ielement){
+        throw new Error('==== Abstract class ====');
+    }
+    setCluster(cluster){
+        cluster.addElement(this)
+        this.cluster = cluster
+    }
+}
+
 class SubmitElement extends IElement{
     constructor(element){
         super(element);
-        this.element = element
         this.name = "Submit"
+        this.color = "cyan"
+        this.text = getElementText(element) | element.getAttribute("value")
     }
     static isThisType(element){
         if(
@@ -69,12 +90,61 @@ class SubmitElement extends IElement{
         ) return true
         return false
     }
+    isLabel(textElement){
+        return false
+    }
+    isClustter(ielement){
+        return false
+    }
 }
-
+class IRadio extends IElement{
+    constructor(element){
+        super(element);
+        this.name = "Radio"
+        this.color = "red"
+    }
+    static isThisType(element){
+        if(
+            (
+                getElementTagname(element) == "input" &&
+                element.getAttribute("type") == "radio"
+            ) 
+            // if it's clickable from css or js point of view
+        ) return true
+        return false
+    }
+    isLabel(textElement){
+        if(
+            Rect.get1DDistance(textElement.rect.cx, this.rect.cx) < (textElement.rect.w/2 + this.rect.w/2 + (4 * unit))
+        ){
+            return true
+        }
+        return false
+    }
+    isClustter(ielement){
+        if(
+            (
+                (
+                    Rect.get1DDistance(ielement.rect.cx, this.rect.cx)< 1 * unit &&
+                    Rect.get1DDistance(ielement.rect.cy, this.rect.cy)< 4 * unit
+                ) ||
+                (
+                    Rect.get1DDistance(ielement.rect.cx, this.rect.cx)< 4 * unit &&
+                    Rect.get1DDistance(ielement.rect.cy, this.rect.cy)< 1 * unit
+                )
+            ) &&
+            (
+                getElementTagname(this.element) == getElementTagname(ielement.element)
+            )
+        ){
+            return true
+        }
+        return false
+    }
+}
 class InputField extends IElement{
     constructor(element){
         super(element);
-        this.element = element
         this.name = "Field"
         this.placeHolder = ""
         this.value = ""
@@ -89,16 +159,41 @@ class InputField extends IElement{
         ) return true
         return false
     }
-}
-
-class Label{
-
-    constructor(){
-        // element if element, rect
-        // text
-        // 
+    isLabel(textElement){
+        if(
+            (
+                Rect.get1DDistance(textElement.rect.x, this.rect.x)< 2 * unit &&
+                Rect.get1DDistance(textElement.rect.cy, this.rect.cy)< 4 * unit
+            ) ||
+            (
+                Rect.get1DDistance(textElement.rect.y, this.rect.y)< 2 * unit &&
+                Rect.get1DDistance(textElement.rect.cx, this.rect.cx) < (textElement.rect.w/2 + this.rect.w/2 + (4 * unit))
+            )
+        ){
+            return true
+        }
+        return false
+    }
+    isClustter(ielement){
+        return false
     }
 }
+
+
+class Group{
+}
+
+class ICluster{
+    constructor(){
+        this.ielements = []
+        this.rect = null
+    }
+    addElement(element){
+        this.ielements.push(element)
+    }
+}
+
+
 
 function highlightElement(target, color, text){
     console.log(target)
@@ -180,16 +275,12 @@ function getElementText(el) {
     return directText.trim()
 }
 function getIElement(el){
-    const IElementClasses = [InputField, SubmitElement]
-    let IElementInstance = null
-    for (let index = 0; index < IElementClasses.length; index++) {
-        const IElementClass = IElementClasses[index];
-        if(IElementClass.isThisType(el)){
-            IElementInstance = new IElementClass(el)
-            break
-        }
-    }
-    return IElementInstance;
+
+    const IElementClass = IElementClasses.find(IElementClass=>IElementClass.isThisType(el))
+    if(!IElementClass)
+        return null
+    ielementInstance = new IElementClass(el)
+    return ielementInstance;
 }
 function getTextElement(el){
     if(TextElement.isThisType(el)){
@@ -206,27 +297,52 @@ function getGroups(contextPath, floorPath, segments){
     const context = getContextObj(contextPath)
     const floor = getFloorObj(context, floorPath)
 
-    segments
+    const ielements = segments.filter(element => element instanceof IElement); 
+    const textElements = segments.filter(element => element instanceof TextElement); 
 
-    // loop segment
-    // for every IElement find label
-    // find subgroup of IElements
-    // find texts in group from subgroup
+    ielements.forEach(ielement => {
+        const labelIndex = textElements.findIndex(textElement=>ielement.isLabel(textElement))
+        if(!labelIndex)
+            return 
+        ielement.setLabel({...textElements[labelIndex]})
+        textElements.splice(labelIndex, 1)
+    });
+
+    let clusters = []
+    ielements.forEach(ielement => {
+        if(!ielement.cluster){
+            const cluster = new ICluster()
+            ielement.setCluster(cluster)
+            clusters.push(cluster)
+        }
+        ielements.forEach(ielement2 => {
+            if(ielement2.cluster)
+                return
+            if(ielement.isClustter(ielement2)){
+                ielement2.setCluster(ielement.cluster)
+            }
+        });
+    });
+
+    console.log(clusters)
+
+    // find texts in group from iscluster
 }
 
 
 
 // ====================== EXE ==========================
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
-
+const IElementClasses = [InputField, SubmitElement, IRadio]
 const contextPath = "";
 const floorPath = "body";
 
 
 let segments = getFloorSegments(contextPath, floorPath)
 
-segments.forEach((segment, i)=>{
-    highlightElement(segment.element, "red", `${segment.name}`)
-})
+// segments.forEach((segment, i)=>{
+//     highlightElement(segment.element, segment.color, `${segment.name}`)
+// })
 
 let groups = getGroups(contextPath, floorPath, segments)
+
