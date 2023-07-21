@@ -15,6 +15,21 @@ class Rect{
         const yDiff = y1 - y0;
         return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
     }
+    static combineRects(rects){
+        var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        
+        rects.forEach(function(rect) {
+            if(rect == null)
+                return null
+
+            minX = Math.min(minX, rect.x);
+            minY = Math.min(minY, rect.y);
+            maxX = Math.max(maxX, rect.x + rect.w);
+            maxY = Math.max(maxY, rect.y + rect.h);
+        });
+        
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
+    }
 }
 
 class Segment{
@@ -31,7 +46,7 @@ class Segment{
     static isThisType(element){
         throw new Error('==== Abstract class ====');
     }
-
+    
 
 }
 
@@ -68,8 +83,10 @@ class IElement extends Segment{
         throw new Error('==== Abstract class ====');
     }
     setCluster(cluster){
-        cluster.addElement(this)
         this.cluster = cluster
+    }
+    getOuterRect(){
+        return Rect.combineRects([this.rect, this.label.rect])
     }
 }
 
@@ -190,6 +207,15 @@ class ICluster{
     }
     addElement(element){
         this.ielements.push(element)
+        this.updateRect(element)
+    }
+    updateRect(element){
+        if(this.rect == null){
+            this.rect = element.getOuterRect()
+        }else{
+
+            this.rect = Rect.combineRects([this.rect, element.getOuterRect()])
+        }
     }
 }
 
@@ -213,6 +239,42 @@ function highlightElement(target, color, text){
     
     container.insertBefore(label, container.firstChild)
     target.insertBefore(container, target.firstChild);
+}
+
+function highlight(rect, color, label) {
+    const svgNS = 'http://www.w3.org/2000/svg';
+
+    // Create SVG element
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.style.position = 'absolute';
+    svg.style.top = '0';
+    svg.style.left = '0';
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.pointerEvents = 'none';
+    svg.style.zIndex = '9999';
+
+    // Create Rectangle
+    const rectangle = document.createElementNS(svgNS, 'rect');
+    rectangle.setAttribute('x', rect.x);
+    rectangle.setAttribute('y', rect.y);
+    rectangle.setAttribute('width', rect.w);
+    rectangle.setAttribute('height', rect.h);
+    rectangle.setAttribute('stroke', color);
+    rectangle.setAttribute('fill', 'none');
+
+    // Create Label
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', rect.x);
+    text.setAttribute('y', Number(rect.y) + Number(rect.h)); // Position below the rectangle
+    text.setAttribute('dy', '1.2em'); // Offset below the rectangle
+    text.setAttribute('fill', color); // Color of text same as box's
+    text.textContent = label;
+
+    // Add elements to SVG and then to Body
+    svg.appendChild(rectangle);
+    svg.appendChild(text);
+    document.body.appendChild(svg);
 }
 
 
@@ -312,6 +374,7 @@ function getGroups(contextPath, floorPath, segments){
     ielements.forEach(ielement => {
         if(!ielement.cluster){
             const cluster = new ICluster()
+            cluster.addElement(ielement)
             ielement.setCluster(cluster)
             clusters.push(cluster)
         }
@@ -319,12 +382,15 @@ function getGroups(contextPath, floorPath, segments){
             if(ielement2.cluster)
                 return
             if(ielement.isClustter(ielement2)){
+                ielement.cluster.addElement(ielement2)
                 ielement2.setCluster(ielement.cluster)
             }
         });
     });
 
-    console.log(clusters)
+    clusters.forEach(cluster => {
+        highlight(cluster.rect, "#05B8CC", "cluster")
+    });
 
     // find texts in group from iscluster
 }
