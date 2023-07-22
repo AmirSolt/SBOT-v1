@@ -238,6 +238,27 @@ class InputField extends IElement{
 
 
 class Group{
+
+    constructor(cluster){
+        this.instructions = []
+        this.cluster = cluster
+        this.rect = cluster.rect
+    }
+    updateRect(element){
+        this.rect = Rect.combineRects([this.rect, element.rect])
+    }
+    isInstruction(textElement){
+        if(
+            Rect.isWithinMargin(this.cluster.rect, textElement.rect, 2*unit, "t")
+        ){
+            return true
+        }
+        return false
+    }
+    addInstruction(textElement){
+        this.instructions.push(textElement)
+        this.updateRect(textElement)
+    }
 }
 
 class ICluster{
@@ -420,14 +441,16 @@ function getGroups(contextPath, floorPath, segments){
     const ielements = segments.filter(element => element instanceof IElement); 
     const textElements = segments.filter(element => element instanceof TextElement); 
 
+    // ============ labels ==============
     ielements.forEach(ielement => {
         const labelIndex = textElements.findIndex(textElement=>ielement.isLabel(textElement))
         if(labelIndex==-1)
             return 
-        ielement.setLabel(textElements[labelIndex])
-        textElements.splice(labelIndex,1)
+            ielement.setLabel(textElements[labelIndex])
+            textElements.splice(labelIndex,1)
     });
-
+    
+    // ============ clusters ==============
     let clusters = []
     ielements.forEach(ielement => {
         if(!ielement.cluster){
@@ -446,13 +469,31 @@ function getGroups(contextPath, floorPath, segments){
         });
     });
 
-    console.log(clusters)
 
-    clusters.forEach(cluster => {
-        highlight(cluster.rect, "#05B8CC", "cluster")
+    // console.log(clusters)
+
+    // clusters.forEach(cluster => {
+    //     highlight(cluster.rect, "#05B8CC", "group")
+    // });
+
+
+    // ============ groups ==============
+    const groups = clusters.map(cluster => {
+        const group = new Group(cluster)
+        const labelIndex = textElements.findIndex(textElement=>group.isInstruction(textElement))
+        if(labelIndex==-1)
+            return group
+        group.addInstruction(textElements[labelIndex])
+        textElements.splice(labelIndex,1)
+        return group
+    });
+    
+    console.log(groups)
+
+    groups.forEach(group => {
+        highlight(group.rect, "#AA4A44", "group")
     });
 
-    // find texts in group from iscluster
 }
 
 
@@ -466,9 +507,9 @@ const floorPath = "body";
 
 let segments = getFloorSegments(contextPath, floorPath)
 
-segments.forEach((segment, i)=>{
-    highlightElement(segment.element, segment.color, `${segment.name}`)
-})
+// segments.forEach((segment, i)=>{
+//     highlightElement(segment.element, segment.color, `${segment.name}`)
+// })
 
-// let groups = getGroups(contextPath, floorPath, segments)
+let groups = getGroups(contextPath, floorPath, segments)
 
