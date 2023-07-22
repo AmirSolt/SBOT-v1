@@ -1,35 +1,32 @@
 
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
-
+import os
+import openai
 from InstructorEmbedding import INSTRUCTOR
 from PIL import Image
 import timm
 import torch
 
 
+CHAT_INSTRUCTIONS = ""
 
 # model = INSTRUCTOR('hkunlp/instructor-base')
+
+openai.organization = "org-asd"
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+
+
 
 def embed_str(text:str)->list[float]:
     # return model.encode(text)
     return None
-    
-    
-
-
-
-
-
-
-
-
-
 
 def get_similar_items(items:list, embeddings:list[list[float]], target:list[float], threshold:float, method:str):
     indecies = get_similar_indecies(embeddings, target, threshold, method)
     return [items[i] for i in indecies]
-
 
 def get_similar_indecies(embeddings:list[list[float]], target:list[float], threshold:float, method:str)->list[int]:
     
@@ -66,3 +63,23 @@ def recommendations_from_embeddings(
    
 
    return filtered_indices
+
+
+
+
+
+def answer_parsed_group(parsed_group):
+    messages = get_chat_messages(parsed_group)
+    chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
+    answer = chat_completion.choices[0].message.content
+    return answer
+
+def get_chat_messages(parsed_group):
+    messages = []
+    messages.append(
+    {"role": "system", "content": CHAT_INSTRUCTIONS}
+    )
+    messages.append(
+    {"role": "user", "content": parsed_group["verbose"]}
+    )
+    return messages

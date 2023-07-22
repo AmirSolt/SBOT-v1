@@ -394,6 +394,7 @@ function getGroup(floorInfo){
             this.text = getElementText(element)
         }
         static isThisType(element){
+            // NOTE: if it's not obstructed by blur
             if(getElementText(element))
                 return true
             return false
@@ -534,7 +535,34 @@ function getGroup(floorInfo){
             return false
         }
     }
-    
+    class Cluster{
+        constructor(){
+            this.ielements = []
+            this.rect = null
+        }
+        addElement(element){
+            this.ielements.push(element)
+            this.updateRect(element)
+        }
+        updateRect(element){
+            if(this.rect == null){
+                this.rect = element.getOuterRect()
+            }else{
+                this.rect = Rect.combineRects([this.rect, element.getOuterRect()])
+            }
+        }
+        getIElementsDict(){
+            return this.ielements.map(ielement=>{
+                return{
+                    "label":ielement.label,
+                    "path":ielement.getPath(),
+                }
+            })
+        }
+        getVerbose(){
+            return getAllVerbose(this.ielements).join("\n")
+        }
+    }
     class Group{
     
         constructor(cluster){
@@ -572,36 +600,6 @@ function getGroup(floorInfo){
         }
     }
     
-    class Cluster{
-        constructor(){
-            this.ielements = []
-            this.rect = null
-        }
-        addElement(element){
-            this.ielements.push(element)
-            this.updateRect(element)
-        }
-        updateRect(element){
-            if(this.rect == null){
-                this.rect = element.getOuterRect()
-            }else{
-                this.rect = Rect.combineRects([this.rect, element.getOuterRect()])
-            }
-        }
-        getIElementsDict(){
-            return this.ielements.map(ielement=>{
-                return{
-                    "label":ielement.label,
-                    "path":ielement.getPath(),
-                }
-            })
-        }
-        getVerbose(){
-            return getAllVerbose(this.ielements).join("\n")
-        }
-    }
-    
-
     // ====================== Floor Segments ==========================
     
     function getFloorSegments(floor){

@@ -5,7 +5,7 @@ from ..profile import Profile
 
 
 from helper import utils, config
-from funcs import pauser, vacuum
+from funcs import pauser, vacuum, AI, actor
 
 
 
@@ -32,14 +32,18 @@ class Worker:
         
         print("========== tick starts ==========")
         
+    
         vacuum.clean_old_files(self.worker_id)
-        
         # print("====  Test Pause ===")
         pauser.test_pause()
+        
+        # states
               
-        parsed_html = self.browser.get_parsed_html()
+        parsed_group = self.browser.get_parsed_group()
+        
+        answer = AI.answer_parsed_group(parsed_group)
 
-
+        actor.act_on_answer(parsed_group, answer)
 
     
     

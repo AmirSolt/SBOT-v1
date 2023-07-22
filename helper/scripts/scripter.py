@@ -9,6 +9,7 @@ def read_js(path):
     return data
 
 
+
 def getGroupScript():
     text = read_js("C:/Users/killo/Desktop/SBOT/helper/scripts/group.js")
     
