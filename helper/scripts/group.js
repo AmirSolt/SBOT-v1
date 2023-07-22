@@ -91,28 +91,38 @@ class Segment{
 
     constructor(element){
         this.element = element
-        this.name = ""
+        this.labelName = ""
+        this.verboseName = ""
         this.color = "white"
         this.rect = Rect.elementToRect(element)
     }
     static isThisType(element){
         throw new Error('==== Abstract class ====');
     }
-    
-
+    getVerbose(){
+        throw new Error('==== Abstract class ====');
+    }
+    getPath(){
+        return getUniqueCssPath(this.element)
+    }
 }
 
 class TextElement extends Segment{
     constructor(element){
         super(element);
         this.element = element
-        this.name = "Text"
+        this.labelName = "Text"
+        this.verboseName = "Text"
         this.color = "green"
+        this.text = getElementText(element)
     }
     static isThisType(element){
         if(getElementText(element))
             return true
         return false
+    }
+    getVerbose(){
+        return this.text
     }
 }
 
@@ -127,7 +137,8 @@ class IElement extends Segment{
         throw new Error('==== Abstract class ====');
     }
     setLabel(textElement){
-        textElement.name = "Label"
+        textElement.labelName = "Label"
+        textElement.verboseName = "Label"
         textElement.color = "purple"
         this.label = textElement
     }
@@ -144,12 +155,16 @@ class IElement extends Segment{
         }
         return Rect.combineRects(rects)
     }
+    getVerbose(){
+        return `[Input: ${this.labelName}]`+" : "+this.label.getVerbose()
+    }
 }
 
 class SubmitElement extends IElement{
     constructor(element){
         super(element);
-        this.name = "Submit"
+        this.labelName = "Submit"
+        this.verboseName = "Submit"
         this.color = "cyan"
         this.text = getElementText(element) | element.getAttribute("value")
     }
@@ -173,7 +188,8 @@ class SubmitElement extends IElement{
 class IRadio extends IElement{
     constructor(element){
         super(element);
-        this.name = "Radio"
+        this.labelName = "Radio"
+        this.verboseName = "Option"
         this.color = "red"
     }
     static isThisType(element){
@@ -211,7 +227,8 @@ class IRadio extends IElement{
 class InputField extends IElement{
     constructor(element){
         super(element);
-        this.name = "Field"
+        this.labelName = "Field"
+        this.verboseName = "Text Field"
         this.placeHolder = ""
         this.value = ""
     }
@@ -261,9 +278,20 @@ class Group{
         this.instructions.push(textElement)
         this.updateRect(textElement)
     }
+    getDict(){
+        return {
+            "action_type":"uknown",
+            "verbose":getVerbose(),
+            "instructions": getAllVerbose(this.instructions).join("\n"),
+            "ielements":this.cluster.getIElementsDict(),
+        }
+    }
+    getVerbose(){
+        return getAllVerbose(this.instructions).join("\n") + "\n" + this.cluster.getVerbose()
+    }
 }
 
-class ICluster{
+class Cluster{
     constructor(){
         this.ielements = []
         this.rect = null
@@ -276,14 +304,25 @@ class ICluster{
         if(this.rect == null){
             this.rect = element.getOuterRect()
         }else{
-
             this.rect = Rect.combineRects([this.rect, element.getOuterRect()])
         }
     }
+    getIElementsDict(){
+        return this.ielements.map(ielement=>{
+            return{
+                "label":ielement.label,
+                "path":ielement.getPath(),
+            }
+        })
+    }
+    getVerbose(){
+        return getAllVerbose(this.ielements).join("\n")
+    }
 }
 
-
-
+function getAllVerbose(elements){
+    return elements.map(ielement=>ielement.getVerbose())
+}
 function highlightElement(target, color, text){
     console.log(target)
     // console.log(target.style)
@@ -303,7 +342,6 @@ function highlightElement(target, color, text){
     container.insertBefore(label, container.firstChild)
     target.insertBefore(container, target.firstChild);
 }
-
 function highlight(rect, color, label) {
     const svgNS = 'http://www.w3.org/2000/svg';
 
@@ -355,7 +393,25 @@ function randomColor() {
     
     return color;
 }
-
+function getUniqueCssPath(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+    }
+    const path = [];
+    while (el.nodeType === Node.ELEMENT_NODE && el.nodeName.toLowerCase() !== 'html') {
+        let selector = el.nodeName.toLowerCase();
+        if (el.parentNode) {
+            const siblings = Array.from(el.parentNode.children);
+            const sameTagSiblings = siblings.filter(sibling => sibling.nodeName.toLowerCase() === selector);
+            if (sameTagSiblings.length > 1) {
+                selector += `:nth-child(${siblings.indexOf(el) + 1})`;
+            }
+        }
+        path.unshift(selector);
+        el = el.parentNode;
+    }
+    return path.join(' > ');
+}
 
 // ====================== Floor Segments ==========================
 
@@ -475,7 +531,7 @@ function getGroups(contextPath, floorPath, segments){
     let clusters = []
     ielements.forEach(ielement => {
         if(!ielement.cluster){
-            const cluster = new ICluster()
+            const cluster = new Cluster()
             cluster.addElement(ielement)
             ielement.setCluster(cluster)
             clusters.push(cluster)
@@ -550,7 +606,7 @@ const floorPath = "body";
 let segments = getFloorSegments(contextPath, floorPath)
 
 // segments.forEach((segment, i)=>{
-//     highlightElement(segment.element, segment.color, `${segment.name}`)
+//     highlightElement(segment.element, segment.color, `${segment.labelName}`)
 // })
 
 let groups = getGroups(contextPath, floorPath, segments)
