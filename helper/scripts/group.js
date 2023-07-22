@@ -1,3 +1,12 @@
+class Geo{
+    static get2DDistance(x0, y0, x1, y1){
+        const xDiff = x1 - x0;
+        const yDiff = y1 - y0;
+        return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+    }
+
+}
+
 class Rect{
     constructor(x,y,w,h){
         this.x = x
@@ -7,14 +16,54 @@ class Rect{
         this.cx = this.x + this.w / 2;
         this.cy = this.y + this.h / 2;
     }
-    static get1DDistance(p0, p1){
-        return Math.abs(p0-p1)
+    static isWithinMargin(rect0, rect1, distance, directions){
+        const directionsArr = directions.split(",")
+        const conditions = directionsArr.map(direction=>{
+            switch(direction.toLowerCase().trim()) {
+                case "l":
+                    return Rect.isWithinXMargin(rect0, rect1, -distance) &&
+                            Rect.areYBoundsOverlaping(rect0, rect1)
+                case "r":
+                    return Rect.isWithinXMargin(rect0, rect1, distance) &&
+                            Rect.areYBoundsOverlaping(rect0, rect1)
+                case "t":
+                    return Rect.isWithinYMargin(rect0, rect1, -distance) &&
+                            Rect.areXBoundsOverlaping(rect0, rect1)
+                case "b":
+                    return Rect.isWithinYMargin(rect0, rect1, distance) &&
+                            Rect.areXBoundsOverlaping(rect0, rect1)
+                default:
+                    throw new Error(`direction: ${direction} doesnt exist`);
+            }
+        })
+
+        return conditions.some(v=>v==true)
     }
-    static get2DDistance(x0, y0, x1, y1){
-        const xDiff = x1 - x0;
-        const yDiff = y1 - y0;
-        return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+    static areXBoundsOverlaping(rect0, rect1){
+        return (
+            (rect0.x < rect1.x+rect1.w) &&
+            (rect0.x + rect0.w > rect1.x)
+        )
     }
+    static areYBoundsOverlaping(rect0, rect1){
+        return (rect0.y < rect1.y+rect1.h) &&
+                (rect0.y + rect0.h > rect1.y)
+    }
+    static isWithinXMargin(rect0, rect1, distance){
+        // <0 is left
+        let d = rect1.cx - rect0.cx
+        const direction = (d/Math.abs(d))
+        let margin = d - ((rect0.w/2 + rect1.w/2) * direction)
+        return (margin*direction) < (distance*direction)
+    }
+    static isWithinYMargin(rect0, rect1, distance){
+        // <0 is top
+        let d = rect1.cy - rect0.cy
+        const direction = (d/Math.abs(d))
+        let margin = d - ((rect0.h/2 + rect1.h/2) * direction)
+        return (margin*direction) < (distance*direction)
+    }
+
     static combineRects(rects){
         var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         
@@ -42,6 +91,7 @@ class Segment{
 
         const domRect =  element.getBoundingClientRect()
         this.rect = new Rect(domRect.left, domRect.top, domRect.width, domRect.height)
+        // this.rect = new Rect(domRect.left + window.scrollX, domRect.top + window.scrollY, domRect.width, domRect.height)
     }
     static isThisType(element){
         throw new Error('==== Abstract class ====');
@@ -86,7 +136,11 @@ class IElement extends Segment{
         this.cluster = cluster
     }
     getOuterRect(){
-        return Rect.combineRects([this.rect, this.label.rect])
+        const rects = [this.rect]
+        if(this.label!=null){
+            rects.push(this.label.rect)
+        }
+        return Rect.combineRects(rects)
     }
 }
 
@@ -132,7 +186,7 @@ class IRadio extends IElement{
     }
     isLabel(textElement){
         if(
-            Rect.get1DDistance(textElement.rect.cx, this.rect.cx) < (textElement.rect.w/2 + this.rect.w/2 + (4 * unit))
+            Rect.isWithinMargin(this.rect, textElement.rect, unit/2, "l,r")
         ){
             return true
         }
@@ -141,14 +195,7 @@ class IRadio extends IElement{
     isClustter(ielement){
         if(
             (
-                (
-                    Rect.get1DDistance(ielement.rect.cx, this.rect.cx)< 1 * unit &&
-                    Rect.get1DDistance(ielement.rect.cy, this.rect.cy)< 4 * unit
-                ) ||
-                (
-                    Rect.get1DDistance(ielement.rect.cx, this.rect.cx)< 4 * unit &&
-                    Rect.get1DDistance(ielement.rect.cy, this.rect.cy)< 1 * unit
-                )
+                Rect.isWithinMargin(this.rect, ielement.rect, unit, "l,r,t,b")
             ) &&
             (
                 getElementTagname(this.element) == getElementTagname(ielement.element)
@@ -178,14 +225,7 @@ class InputField extends IElement{
     }
     isLabel(textElement){
         if(
-            (
-                Rect.get1DDistance(textElement.rect.x, this.rect.x)< 2 * unit &&
-                Rect.get1DDistance(textElement.rect.cy, this.rect.cy)< 4 * unit
-            ) ||
-            (
-                Rect.get1DDistance(textElement.rect.y, this.rect.y)< 2 * unit &&
-                Rect.get1DDistance(textElement.rect.cx, this.rect.cx) < (textElement.rect.w/2 + this.rect.w/2 + (4 * unit))
-            )
+            Rect.isWithinMargin(this.rect, textElement.rect, unit/2, "l,t")
         ){
             return true
         }
@@ -246,13 +286,14 @@ function highlight(rect, color, label) {
 
     // Create SVG element
     const svg = document.createElementNS(svgNS, 'svg');
-    svg.style.position = 'absolute';
+    svg.style.position = 'fixed';
     svg.style.top = '0';
     svg.style.left = '0';
     svg.style.width = '100%';
     svg.style.height = '100%';
     svg.style.pointerEvents = 'none';
     svg.style.zIndex = '9999';
+    svg.style.fontSize = unit;
 
     // Create Rectangle
     const rectangle = document.createElementNS(svgNS, 'rect');
@@ -260,6 +301,7 @@ function highlight(rect, color, label) {
     rectangle.setAttribute('y', rect.y);
     rectangle.setAttribute('width', rect.w);
     rectangle.setAttribute('height', rect.h);
+    rectangle.setAttribute('stroke-width', unit/8);
     rectangle.setAttribute('stroke', color);
     rectangle.setAttribute('fill', 'none');
 
@@ -268,15 +310,28 @@ function highlight(rect, color, label) {
     text.setAttribute('x', rect.x);
     text.setAttribute('y', Number(rect.y) + Number(rect.h)); // Position below the rectangle
     text.setAttribute('dy', '1.2em'); // Offset below the rectangle
+    text.setAttribute('font-size', unit); 
     text.setAttribute('fill', color); // Color of text same as box's
+    text.setAttribute('stroke', "none");
     text.textContent = label;
 
     // Add elements to SVG and then to Body
     svg.appendChild(rectangle);
     svg.appendChild(text);
     document.body.appendChild(svg);
-}
 
+}
+function randomColor() {
+    // Method to generate a hexadecimal number till the range of 80
+    var randomColorComponent = function() {
+        return ('0' + Math.floor(Math.random() * Math.floor(128)).toString(16)).substr(-2);
+    }
+
+    // Generate a dark color by generating a random number till 80 for each component.
+    var color = "#" + randomColorComponent() + randomColorComponent() + randomColorComponent();
+    
+    return color;
+}
 
 
 // ====================== Floor Segments ==========================
@@ -320,8 +375,11 @@ function isLowVis(style) {
 }
 function getSegment(el){
     let segment = getIElement(el);
-    if(!segment)
+    if(segment == null)
         segment = getTextElement(el)
+    if(segment == null || segment.rect == null)
+        return null
+ 
     return segment
 }
 function getElementTagname(el){
@@ -364,10 +422,10 @@ function getGroups(contextPath, floorPath, segments){
 
     ielements.forEach(ielement => {
         const labelIndex = textElements.findIndex(textElement=>ielement.isLabel(textElement))
-        if(!labelIndex)
+        if(labelIndex==-1)
             return 
-        ielement.setLabel({...textElements[labelIndex]})
-        textElements.splice(labelIndex, 1)
+        ielement.setLabel(textElements[labelIndex])
+        textElements.splice(labelIndex,1)
     });
 
     let clusters = []
@@ -388,6 +446,8 @@ function getGroups(contextPath, floorPath, segments){
         });
     });
 
+    console.log(clusters)
+
     clusters.forEach(cluster => {
         highlight(cluster.rect, "#05B8CC", "cluster")
     });
@@ -406,9 +466,9 @@ const floorPath = "body";
 
 let segments = getFloorSegments(contextPath, floorPath)
 
-// segments.forEach((segment, i)=>{
-//     highlightElement(segment.element, segment.color, `${segment.name}`)
-// })
+segments.forEach((segment, i)=>{
+    highlightElement(segment.element, segment.color, `${segment.name}`)
+})
 
-let groups = getGroups(contextPath, floorPath, segments)
+// let groups = getGroups(contextPath, floorPath, segments)
 
