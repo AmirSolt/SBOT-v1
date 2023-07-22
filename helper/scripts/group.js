@@ -16,6 +16,11 @@ class Rect{
         this.cx = this.x + this.w / 2;
         this.cy = this.y + this.h / 2;
     }
+    static elementToRect(element){
+        const domRect =  element.getBoundingClientRect()
+        // new Rect(domRect.left + window.scrollX, domRect.top + window.scrollY, domRect.width, domRect.height)
+        return new Rect(domRect.left, domRect.top, domRect.width, domRect.height)
+    }
     static isWithinMargin(rect0, rect1, distance, directions){
         const directionsArr = directions.split(",")
         const conditions = directionsArr.map(direction=>{
@@ -88,10 +93,7 @@ class Segment{
         this.element = element
         this.name = ""
         this.color = "white"
-
-        const domRect =  element.getBoundingClientRect()
-        this.rect = new Rect(domRect.left, domRect.top, domRect.width, domRect.height)
-        // this.rect = new Rect(domRect.left + window.scrollX, domRect.top + window.scrollY, domRect.width, domRect.height)
+        this.rect = Rect.elementToRect(element)
     }
     static isThisType(element){
         throw new Error('==== Abstract class ====');
@@ -433,10 +435,29 @@ function getTextElement(el){
 
 // ====================== Grouping ==========================
 
+function isRectOnFloorEdge(rect, floorRect){
+    // Calculate 10% of floorRect's dimensions
+    let leftPercentage = 0.1 * floorRect.w;
+    let topPercentage = 0.1 * floorRect.h;
+    let rightPercentage = floorRect.w - leftPercentage;
+    let bottomPercentage = floorRect.h - topPercentage;
+
+    // check the rect's center if it is in 10% edge of floorRect
+    if (rect.cx > (floorRect.x + leftPercentage) && rect.cx < (floorRect.x + rightPercentage)
+        && rect.cy > (floorRect.y + topPercentage) && rect.cy < (floorRect.y + bottomPercentage)) {
+        // rect's center falls within the 10% range of each side of floorRect
+        return true;
+    } else {
+        // rect 's center does not falls within the 10% range of any side of floorRect
+        return false;
+    }
+}
+
 
 function getGroups(contextPath, floorPath, segments){
     const context = getContextObj(contextPath)
     const floor = getFloorObj(context, floorPath)
+    const floorRect = Rect.elementToRect(floor)
 
     const ielements = segments.filter(element => element instanceof IElement); 
     const textElements = segments.filter(element => element instanceof TextElement); 
@@ -488,8 +509,29 @@ function getGroups(contextPath, floorPath, segments){
         return group
     });
     
-    console.log(groups)
+    groups.sort((a,b)=>{
+        const aOnEdge = isRectOnFloorEdge(a, floorRect);
+        const bOnEdge = isRectOnFloorEdge(b, floorRect);
+        if(!aOnEdge && bOnEdge){
+            return 1
+        }
+        if(aOnEdge && !bOnEdge){
+            return -1
+        }
+        if(!aOnEdge && !bOnEdge){
+            if(a.rect.cy > b.rect.cy){
+                return 1
+            }
+            if(a.rect.cy < b.rect.cy){
+                return -1
+            }
+            return 0
+        }
+        return 0
 
+    })
+
+    console.log(groups)
     groups.forEach(group => {
         highlight(group.rect, "#AA4A44", "group")
     });
