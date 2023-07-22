@@ -230,3 +230,5 @@ getOrderedFloors(floors).slice(0,20).forEach((floor, i)=>{
     if(floor["score"]>MIN_Floor_SCORE)
         highlightElement(floor["element"], "red", `${i}`)
 })
+
+const result = floors[0]

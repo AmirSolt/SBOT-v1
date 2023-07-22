@@ -86,6 +86,8 @@ class Rect{
     }
 }
 
+
+
 class Segment{
 
 
@@ -254,7 +256,6 @@ class InputField extends IElement{
         return false
     }
 }
-
 
 class Group{
 
@@ -587,9 +588,7 @@ function getGroups(contextPath, floorPath, segments){
 
     })
 
-    groups.forEach(group => {
-        highlight(group.rect, "#AA4A44", "group")
-    });
+    
 
     return groups
 }
@@ -611,4 +610,13 @@ let segments = getFloorSegments(contextPath, floorPath)
 
 let groups = getGroups(contextPath, floorPath, segments)
 
+groups.forEach((group,i) => {
+    if(i==0)
+        highlight(group.rect, "#09E912", "group")
+
+    highlight(group.rect, "#ff0000", "group")
+});
+
 const result = groups[0].getDict()
+
+console.log(result)

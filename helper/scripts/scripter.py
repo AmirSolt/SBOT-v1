@@ -12,7 +12,7 @@ def read_js(path):
 def getGroupScript():
     text = read_js("C:/Users/killo/Desktop/SBOT/helper/scripts/group.js")
     
-    text += "return result"
+    text += "return msResult"
     
     return text
     
