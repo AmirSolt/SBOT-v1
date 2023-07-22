@@ -281,7 +281,7 @@ class Group{
     getDict(){
         return {
             "action_type":"uknown",
-            "verbose":getVerbose(),
+            "verbose":this.getVerbose(),
             "instructions": getAllVerbose(this.instructions).join("\n"),
             "ielements":this.cluster.getIElementsDict(),
         }
@@ -587,11 +587,11 @@ function getGroups(contextPath, floorPath, segments){
 
     })
 
-    console.log(groups)
     groups.forEach(group => {
         highlight(group.rect, "#AA4A44", "group")
     });
 
+    return groups
 }
 
 
@@ -611,3 +611,4 @@ let segments = getFloorSegments(contextPath, floorPath)
 
 let groups = getGroups(contextPath, floorPath, segments)
 
+const result = groups[0].getDict()
