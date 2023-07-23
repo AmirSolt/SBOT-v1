@@ -13,6 +13,8 @@ load_dotenv()
 
 CHAT_INSTRUCTIONS = "answer the question. context: {context}"
 
+
+print("... loading models")
 model = INSTRUCTOR('hkunlp/instructor-base')
 
 # openai.organization = "org-asd"
@@ -23,7 +25,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def embed_str(text:str)->list[float]:
-    return model.encode(text)
+    return model.encode(text).tolist()
 
 
 def get_similar_items(items:list, embeddings:list[list[float]], target:list[float], threshold:float, method:str):
@@ -79,7 +81,7 @@ def answer_parsed_group(parsed_group, context):
 def get_chat_messages(parsed_group, context):
     messages = []
     messages.append(
-    {"role": "system", "content": CHAT_INSTRUCTIONS.format(context)}
+    {"role": "system", "content": CHAT_INSTRUCTIONS.format(context=context)}
     )
     messages.append(
     {"role": "user", "content": parsed_group["verbose"]}

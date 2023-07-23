@@ -33,6 +33,9 @@ class Profile:
             print("Profile memory loaded")
         else:
             raise Exception("Perm memory is empty")
+        
+        print(f"Email: {self.__get_memory_by_question('email')}")
+        print(f"Password: {self.__get_memory_by_question('password')}")
             
         
 
@@ -84,6 +87,10 @@ class Profile:
         returns memory items close to target_embedding
         """
         embeddings = [memory_item["embedding"] for memory_item in memory]
+        
+        if not embeddings:
+            return []
+        
         memory_items = AI.get_similar_items(memory, embeddings, target_embedding, 0.85, "cosine")
         return memory_items
         
@@ -122,6 +129,11 @@ class Profile:
     def __embed_memory_item(self, question:str, answer:str):
         return AI.embed_str(f"{question} {answer}")
     
+    def __get_memory_by_question(self, question):
+        items = [item["answer"] for item in self.perm_memory if item["question"] == question]
+        if not items:
+            return None
+        return items[0]
 
     def kill(self):
         utils.write_file(self.perm_memory_path, self.perm_memory)

@@ -50,6 +50,8 @@ def read_file(path:str):
         return read_html(path)
     if ext=="txt":
         return read_txt(path)
+    if ext=="js":
+        return read_js(path)
     elif ext=="json":
         return read_json(path)
     elif ext=="pickle":
@@ -88,3 +90,7 @@ def write_txt(path, content):
 def read_txt(path):
     with open(path, 'r', encoding="utf-8") as file:
         return file.read()
+    
+def read_js(path):
+    with open(path, 'r', encoding="utf-8") as file:
+        return file.read().rstrip()
