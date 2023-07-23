@@ -53,7 +53,19 @@ class Profile:
             utils.write_file(self.perm_memory_path, self.perm_memory)
         
         
-    def get_context(self, text:str)->list[str]:
+    def get_parsed_group_context(self, parsed_group)->str:
+        context = []
+        
+        for ielement in parsed_group["ielements"]:
+            text = parsed_group["instructions"]
+            text += "" if not ielement["label"] else " " + ielement["label"]
+            
+            context.extend(self.get_contexts(text))
+            
+        return "\n".join(context)
+        
+        
+    def get_contexts(self, text:str)->list[str]:
         """
         returns a list of strings. each string is a context item that is related to the given text.
         """

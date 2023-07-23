@@ -9,7 +9,7 @@ import timm
 import torch
 
 
-CHAT_INSTRUCTIONS = ""
+CHAT_INSTRUCTIONS = "answer the question. context: {context}"
 
 # model = INSTRUCTOR('hkunlp/instructor-base')
 
@@ -68,16 +68,16 @@ def recommendations_from_embeddings(
 
 
 
-def answer_parsed_group(parsed_group):
-    messages = get_chat_messages(parsed_group)
+def answer_parsed_group(parsed_group, context):
+    messages = get_chat_messages(parsed_group, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
     answer = chat_completion.choices[0].message.content
     return answer
 
-def get_chat_messages(parsed_group):
+def get_chat_messages(parsed_group, context):
     messages = []
     messages.append(
-    {"role": "system", "content": CHAT_INSTRUCTIONS}
+    {"role": "system", "content": CHAT_INSTRUCTIONS.format(context)}
     )
     messages.append(
     {"role": "user", "content": parsed_group["verbose"]}
