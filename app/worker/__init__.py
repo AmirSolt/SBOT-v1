@@ -41,7 +41,7 @@ class Worker:
               
         parsed_group = self.browser.get_parsed_group()
         
-        context = self.profile.get_parsed_group_context()
+        context = self.profile.get_parsed_group_context(parsed_group)
         
         answer = AI.answer_parsed_group(parsed_group, context)
         

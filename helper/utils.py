@@ -23,7 +23,10 @@ def get_filename(path:str)->str:
     return os.path.basename(path)
 
 
-
+def convert_script_return(path):
+    script = read_file(path)
+    script += "\nreturn msResult"
+    return script
         
 
 supported_files = ["json", "pickle", "html"]
@@ -32,6 +35,8 @@ def write_file(path:str, content):
     ext = os.path.splitext(path)[-1].lower()[1:]
     if ext=="html":
         write_html(path, content)
+    if ext=="txt":
+        write_txt(path, content)
     elif ext=="json":
         write_json(path, content)
     elif ext=="pickle":
@@ -43,6 +48,8 @@ def read_file(path:str):
     ext = os.path.splitext(path)[-1].lower()[1:]
     if ext=="html":
         return read_html(path)
+    if ext=="txt":
+        return read_txt(path)
     elif ext=="json":
         return read_json(path)
     elif ext=="pickle":
@@ -73,3 +80,11 @@ def write_pickle(path, content):
 def read_pickle(path):
     with open(path, 'rb') as file:
         return pickle.load(file)
+    
+def write_txt(path, content):
+    with open(path, 'w', encoding="utf-8") as f:
+        f.write(content)
+
+def read_txt(path):
+    with open(path, 'r', encoding="utf-8") as file:
+        return file.read()

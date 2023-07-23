@@ -14,8 +14,12 @@ from selenium.webdriver.remote.webelement import WebElement
 
 from selenium.webdriver.support.color import Color
 
-PARSER_ELEMENTS_SCRIPT = 'function getUniqueCssPath(e){if(!e||e.nodeType!==Node.ELEMENT_NODE)return"";let t=[];for(;e.nodeType===Node.ELEMENT_NODE&&"html"!==e.nodeName.toLowerCase();){let n=e.nodeName.toLowerCase();if(e.parentNode){let i=Array.from(e.parentNode.children),l=i.filter(e=>e.nodeName.toLowerCase()===n);l.length>1&&(n+=`:nth-child(${i.indexOf(e)+1})`)}n+=e.id?`#${e.id}`:"",n+=e.className&&"string"==typeof e.className?"."+e.className.trim().replace(/\s+/g,"."):"",t.unshift(n),e=e.parentNode}return t.join(" > ")}function getAllAttrs(e){let t={};for(let n=0;n<e.attributes.length;n++)t[e.attributes[n].name]=e.attributes[n].value;return t}function getElementText(e){let t="";for(let n=0;n<e.childNodes.length;n++)3===e.childNodes[n].nodeType&&(t+=e.childNodes[n].nodeValue);return t}function isElementVisible(e,t){if(!(t.width>0&&t.height>0))return!1;let n=window.getComputedStyle(e);return"none"!==n.display&&"hidden"!==n.visibility}function getZIndex(e){return parseInt(e.style.zIndex?e.style.zIndex:0)}function verifyIframe(e){}function getChildrenInfo(e,t=""){return Array.from(e.children).map(e=>{let n=e.getBoundingClientRect();if(!isElementVisible(e,n))return null;let i=e,l="";if("IFRAME"==e.tagName)try{i=e.contentWindow.document.body,l=getUniqueCssPath(e)}catch(r){return null}return{iframe_path:t,path:getUniqueCssPath(e),name:e.tagName,width:n.width,height:n.height,attrs:getAllAttrs(e),text:getElementText(e).trim(),allText:e.innerText,z_index:getZIndex(e),children:getChildrenInfo(i,l)}}).filter(e=>e)}let elementsInfo=getChildrenInfo(document.body);return elementsInfo'
+
+
 HIGHLIGHT_SCRIPT = 'let target=document.querySelector(arguments[0]);target.style.borderColor=arguments[1],target.style.borderStyle="solid";var container=document.createElement("div");container.style.position="relative";var label=document.createElement("div");label.textContent=arguments[2],label.style.position="absolute",label.style.top="-40px",label.style.left="0",label.style.borderColor="red",label.style.borderStyle="solid",container.insertBefore(label,container.firstChild),target.insertBefore(container,target.firstChild);'
+
+
+PARSER_ELEMENTS_SCRIPT = utils.convert_script_return(config.SCRIPT_MAIN_PATH)
 
 
 class Browser(uc.Chrome):

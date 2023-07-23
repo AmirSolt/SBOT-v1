@@ -19,3 +19,6 @@ BROWSER_PARSED_HTML_DIR = BROWSER_DIR + "parsed_html/"
 PROFILE_DIR = WORKER_DIR + "profile/"
 PROFILE_PERM_MEM_FILE = PROFILE_DIR + "perm_memory.json"
 PROFILE_SURVEY_MEM_FILE = PROFILE_DIR + "survey_memory.json"
+
+
+SCRIPT_MAIN_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/main.js"

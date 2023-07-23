@@ -4,16 +4,18 @@ from sklearn.neighbors import NearestNeighbors
 import os
 import openai
 from InstructorEmbedding import INSTRUCTOR
-from PIL import Image
-import timm
-import torch
+from dotenv import load_dotenv
+load_dotenv()
+# from PIL import Image
+# import timm
+# import torch
 
 
 CHAT_INSTRUCTIONS = "answer the question. context: {context}"
 
-# model = INSTRUCTOR('hkunlp/instructor-base')
+model = INSTRUCTOR('hkunlp/instructor-base')
 
-openai.organization = "org-asd"
+# openai.organization = "org-asd"
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
@@ -21,8 +23,8 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def embed_str(text:str)->list[float]:
-    # return model.encode(text)
-    return None
+    return model.encode(text)
+
 
 def get_similar_items(items:list, embeddings:list[list[float]], target:list[float], threshold:float, method:str):
     indecies = get_similar_indecies(embeddings, target, threshold, method)
