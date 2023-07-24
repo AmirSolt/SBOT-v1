@@ -11,7 +11,7 @@ load_dotenv()
 # import torch
 
 
-CHAT_INSTRUCTIONS = "answer the question. context: {context}"
+CHAT_INSTRUCTIONS = "only answer the question. choose one or multiple options or answer in full if it's an input field."
 
 
 print("... loading models")
@@ -76,12 +76,23 @@ def answer_parsed_group(parsed_group, context):
     messages = get_chat_messages(parsed_group, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
     answer = chat_completion.choices[0].message.content
+    
+    print("=============")
+    print("context:",context)
+    print("verbose:",parsed_group["verbose"])
+    print("answer:",parsed_group["answer"])
+    print("=============")
+    
     return answer
 
 def get_chat_messages(parsed_group, context):
     messages = []
+    
+    system_message = CHAT_INSTRUCTIONS 
+    system_message += "" if not context else f" context: {context}"
+    
     messages.append(
-    {"role": "system", "content": CHAT_INSTRUCTIONS.format(context=context)}
+    {"role": "system", "content": system_message}
     )
     messages.append(
     {"role": "user", "content": parsed_group["verbose"]}

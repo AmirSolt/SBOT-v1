@@ -90,8 +90,46 @@ function getUniqueCssPath(el) {
     }
     return path.join(' > ');
 }
+function getElementTagname(el){
+    return el.tagName.toLowerCase();
+}
+function getDirectText(el) {
+    let directText = '';
+    for (let i = 0; i < el.childNodes.length; i++) {
+        if (el.childNodes[i].nodeType === 3) {
+            directText += el.childNodes[i].nodeValue;
+        }
+    }
+    return directText.trim()
+}
 
 
+class Vis{
+    static isSpatial(style, rect) {
+        if (!(rect.w > 0 && rect.h > 0)) { return false }
+        if (style.display === 'none') { return false }
+        if (style.visibility === 'hidden') { return false }
+        return true;
+    }
+    static isLowVis(style){
+        if (style.filter !== "none" || style.opacity < "1") {
+            return true;
+        } 
+        return false;
+    }
+    static hasInnerText(el){
+        const innerText = el.innerText
+        if(innerText==null)
+            return false
+        if(innerText.length>0)
+            return true
+        return false
+    }
+    static hasBG(style){
+        return !(style.backgroundColor === 'rgba(0, 0, 0, 0)' || 
+                    style.backgroundColor === 'transparent')
+    }
+}
 class Rect{
     constructor(x,y,w,h){
         this.x = x
@@ -100,6 +138,9 @@ class Rect{
         this.h = h
         this.cx = this.x + this.w / 2;
         this.cy = this.y + this.h / 2;
+    }
+    get area(){
+        return this.w*this.h
     }
     static elementToRect(element){
         const domRect =  element.getBoundingClientRect()
@@ -153,7 +194,6 @@ class Rect{
         let margin = d - ((rect0.h/2 + rect1.h/2) * direction)
         return (margin*direction) < (distance*direction)
     }
-
     static combineRects(rects){
         var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         
@@ -171,68 +211,47 @@ class Rect{
     }
 }
 class FloorInfo{
-    constructor(contextPath, floorPath, score){
+
+    constructor(context, contextPath, element, bodyInfo){
+        this.context = context
         this.contextPath = contextPath
-        this.floorPath = floorPath
-        this.score = score
+        this.element = element
+        this.score = this.getFloorScore(element, bodyInfo)
     }
-
-}
-
-function getFloorInfo(){
-
-    function getDistanceRatio(p0, p1, size){
+    static isType(el){
+        const rect = Rect.elementToRect(el)
+        const style = window.getComputedStyle(el);
+        if(!Vis.isSpatial(style, rect))
+            return false
+        if(Vis.isLowVis(style))
+            return false
+        if(!Vis.hasBG(style))
+            return false
+        if(!Vis.hasInnerText(el))
+            return false
+        return true
+    }
+    static getDistanceRatio(p0, p1, size){
         return Math.abs(p0 - p1)/size
     }
-    function getRectCenter(x, y, w, h){
-        const centerX = x + w / 2;
-        const centerY = y + h / 2;
-        
-        return [centerX, centerY]
+    getFloorPosScore(rect){
+    
+        let xScore = FloorInfo.getDistanceRatio(rect.cx, screen.cx, screen.w);
+        let yScore = FloorInfo.getDistanceRatio(rect.cy, screen.cy, screen.h);
+    
+        xScore = 1-xScore
+        yScore = 1-yScore
+    
+        return ((xScore*0.5) + (yScore*0.5)) * POS_COEFFICIENT
     }
-    function distanceBetweenCenters(x0, y0, x1, y1) {
-        const xDiff = x1 - x0;
-        const yDiff = y1 - y0;
-        return Math.sqrt(xDiff * xDiff + yDiff * yDiff);
+    getFloorAreaScore(rect, bodyRect){
+        const areaRatio = rect.area/bodyRect.area;
+        return areaRatio * AREA_COEFFICIENT;
     }
-    function getAllIframes(document){
-        return document.querySelectorAll("iframe")
-    }
-    function indexOfMax(arr) {
-        if (arr.length === 0) {
-            return -1;
-        }
-        let max = arr[0];
-        let maxIndex = 0;
-        for (let i = 1; i < arr.length; i++) {
-            if (arr[i] > max) {
-                maxIndex = i;
-                max = arr[i];
-            }
-        }
-        return maxIndex;
-    }
-    function hasInnerText(el){
-        if(el.innerText==null)
-            return false
-        if(el.innerText.length>0)
-            return true
-        return false
-    }
-    function isSpatial(el, rect) {
-        if (!(rect.width > 0 && rect.height > 0)) { return false }
-        let style = window.getComputedStyle(el);
-        if (style.display === 'none') { return false }
-        if (style.visibility === 'hidden') { return false }
-        return true;
-    }
-    function getRectArea(rect){
-        return rect.width * rect.height
-    }
-    function getHierarchyScore(el, style) {
+    getHierarchyScore(el, style) {
         const position = style.getPropertyValue('position');
         const zIndex = style.getPropertyValue('z-index');
-        const tagName = el.tagName.toLowerCase();
+        const tagName = getElementTagname(el)
         let order = 0.0;
     
         if (tagName === 'dialog') {
@@ -255,116 +274,93 @@ function getFloorInfo(){
     
         return order*HIERARCHY_COEFFICIENT;
     }
-    function getFloorPosScore(rect){
-        
-        const [x, y] = getRectCenter(rect.left, rect.top, rect.width, rect.height);
-        const [sx, sy] = getRectCenter(screen.x, screen.y, screen.w, screen.h);
-    
-        let xScore = getDistanceRatio(x, sx, screen.w);
-        let yScore = getDistanceRatio(y, sy, screen.h);
-    
-        xScore = 1-xScore
-        yScore = 1-yScore
-    
-        return ((xScore*0.5) + (yScore*0.5)) * POS_COEFFICIENT
-    }
-    function getFloorAreaScore(rect, bodyRect){
-        const areaRatio = getRectArea(rect)/getRectArea(bodyRect);
-        return areaRatio * AREA_COEFFICIENT;
-    }
-    function getInnerHtmlScore(el, bodyHtmlSize){
+    getInnerHtmlScore(el, bodyHtmlSize){
         return (el.innerHTML.length / bodyHtmlSize) * INNERHTML_COEFFICIENT
     }
-    function avgScore(numbers){
-        const sum = numbers.reduce((a, b) => a + b, 0);
-        return (sum / numbers.length) || 0;
+    avgScore(scores){
+        const sum = scores.reduce((a, b) => a + b, 0);
+        return (sum / scores.length) || 0;
     }
-    function getFloorElementScore(el, bodyInfo){
-    
-        const rect = el.getBoundingClientRect();
-        
-        if(!isSpatial(el, rect))
-            return 0
-    
-        if(!hasInnerText(el))
-            return 0
-    
+    getFloorScore(el, bodyInfo){
+        const rect = Rect.elementToRect(el)
         const style = window.getComputedStyle(el);
-    
+
         const scores = [
-            getHierarchyScore(el, style),
-            getFloorAreaScore(rect, bodyInfo.bodyRect),
-            getFloorPosScore(rect, bodyInfo.bodyRect),
+            this.getHierarchyScore(el, style),
+            this.getFloorAreaScore(rect, bodyInfo.bodyRect),
+            this.getFloorPosScore(rect, bodyInfo.bodyRect),
             // getInnerHtmlScore(el, bodyInfo.bodyHtmlSize),
         ]
-        
-        return avgScore(scores)
+        return this.avgScore(scores)
     }
-    function getFloorElementsByContext(context, contextPath){
+}
+
+
+function getFloorInfo(){
+
+    function getFloorInfosByContext(context, contextPath){
         let elements = context.body.querySelectorAll("*");
         let bodyInfo = {
-            bodyRect: context.body.getBoundingClientRect(),
-            bodyHtmlSize: context.body.innerHTML.length,
+            bodyRect: Rect.elementToRect(context.body),
+            // bodyHtmlSize: context.body.innerHTML.length,
         }
-    
-        
-        const FloorInfos = Array.from(elements).map(el=>{
-    
-            return new FloorInfo(
-                contextPath=contextPath,
-                floorPath=getUniqueCssPath(el),
-                score=getFloorElementScore(el, bodyInfo)
-    
-            )
+        const floorInfos = []
+        Array.from(elements).forEach(el=>{
+            if(FloorInfo.isType(el)){
+                floorInfos.push(new FloorInfo(
+                    context=context,
+                    contextPath=contextPath,
+                    element=el,
+                    bodyInfo=bodyInfo,
+                ))
+            }
         })
-        return FloorInfos
+        return floorInfos
     }
-    function getFloors(){
-        let Floors = []
+    function getAllIframes(document){
+        return document.querySelectorAll("iframe")
+    }
+    function getAllFloorInfos(){
+        let floorInfos = []
     
-        const bodyFloors = getFloorElementsByContext(document, "")
+        const bodyFloors = getFloorInfosByContext(document, "")
         if(bodyFloors!=null)
-            Floors.push(...bodyFloors)
+            floorInfos.push(...bodyFloors)
         
         Array.from(getAllIframes(document)).forEach(iframe => {
             try {
                 let iframeContent = iframe.contentWindow.document;
                 const contextPath = getUniqueCssPath(iframe)
-                const iframeFloors = getFloorElementsByContext(iframeContent, contextPath)
+                const iframeFloors = getFloorInfosByContext(iframeContent, contextPath)
                 if(iframeFloors!=null)
-                    Floors.push(...iframeFloors)
+                    floorInfos.push(...iframeFloors)
             }catch(e){
                 console.log(e)
             }
         });
     
-        return Floors
+        return orderFloorInfos(floorInfos)
     }
-    function getOrderedFloors(Floors){
-        return Floors.sort((a,b) => b.score - a.score)
+    function orderFloorInfos(floorInfos){
+        return floorInfos.sort((a,b) => b.score - a.score)
     }
-    
     
     // ====================================================================
     
-    
-    const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
-    const HIERARCHY_COEFFICIENT = 10;
-    const AREA_COEFFICIENT = 5;
-    const POS_COEFFICIENT = 10;
-    const MIN_Floor_SCORE = 2.0;
-    
-    const floors = getFloors()
-    
-    // getOrderedFloors(floors).slice(0,20).forEach((floor, i)=>{
+    const floorInfos = getAllFloorInfos()
+
+    // floorInfos.slice(0,20).forEach((floor, i)=>{
     //     if(floor["score"]>MIN_Floor_SCORE)
     //         highlightElement(floor["element"], "red", `${i}`)
     // })
     
-    return floors[0]
+    return floorInfos[0]
+
+    
 }
 
 function getGroup(floorInfo){
+
     class Segment{
         constructor(element){
             this.element = element
@@ -373,8 +369,14 @@ function getGroup(floorInfo){
             this.color = "white"
             this.rect = Rect.elementToRect(element)
         }
-        static isThisType(element){
-            throw new Error('==== Abstract class ====');
+        static isThisType(el){
+            const rect = Rect.elementToRect(el)
+            const style = window.getComputedStyle(el);
+            if(!Vis.isSpatial(style, rect))
+                return false
+            if(Vis.isLowVis(style))
+                return false
+            return true
         }
         getVerbose(){
             throw new Error('==== Abstract class ====');
@@ -382,8 +384,15 @@ function getGroup(floorInfo){
         getPath(){
             return getUniqueCssPath(this.element)
         }
+        static getSegment(el){
+            let segment = IElement.getIElement(el);
+            if(segment == null)
+                segment = TextElement.getTextElement(el)
+            if(segment == null || segment.rect == null)
+                return null
+            return segment
+        }
     }
-    
     class TextElement extends Segment{
         constructor(element){
             super(element);
@@ -391,19 +400,24 @@ function getGroup(floorInfo){
             this.labelName = "Text"
             this.verboseName = "Text"
             this.color = "green"
-            this.text = getElementText(element)
+            this.text = getDirectText(element)
         }
         static isThisType(element){
             // NOTE: if it's not obstructed by blur
-            if(getElementText(element))
+            if(getDirectText(element))
                 return true
             return false
         }
         getVerbose(){
             return this.text
         }
+        static getTextElement(el){
+            if(TextElement.isThisType(el)){
+                return new TextElement(el)
+            }
+            return null
+        }
     }
-    
     class IElement extends Segment{
         constructor(element){
             super(element);
@@ -439,15 +453,21 @@ function getGroup(floorInfo){
                 text += this.label.getVerbose()
             return text
         }
-    }
+        static getIElement(el){
     
+            const IElementClass = IElementClasses.find(IElementClass=>IElementClass.isThisType(el))
+            if(!IElementClass)
+                return null
+            return new IElementClass(el);
+        }
+    }
     class SubmitElement extends IElement{
         constructor(element){
             super(element);
             this.labelName = "Submit"
             this.verboseName = "Submit"
             this.color = "cyan"
-            this.text = getElementText(element) | element.getAttribute("value")
+            this.text = getDirectText(element) | element.getAttribute("value")
         }
         static isThisType(element){
             if(
@@ -485,7 +505,7 @@ function getGroup(floorInfo){
         }
         isLabel(textElement){
             if(
-                Rect.isWithinMargin(this.rect, textElement.rect, unit/2, "l,r")
+                Rect.isWithinMargin(this.rect, textElement.rect, smallMargin*unit, "l,r")
             ){
                 return true
             }
@@ -494,7 +514,7 @@ function getGroup(floorInfo){
         isClustter(ielement){
             if(
                 (
-                    Rect.isWithinMargin(this.rect, ielement.rect, unit, "l,r,t,b")
+                    Rect.isWithinMargin(this.rect, ielement.rect, medMargin*unit, "l,r,t,b")
                 ) &&
                 (
                     getElementTagname(this.element) == getElementTagname(ielement.element)
@@ -525,7 +545,7 @@ function getGroup(floorInfo){
         }
         isLabel(textElement){
             if(
-                Rect.isWithinMargin(this.rect, textElement.rect, unit/2, "l,t")
+                Rect.isWithinMargin(this.rect, textElement.rect, medMargin*unit, "l,t")
             ){
                 return true
             }
@@ -575,7 +595,7 @@ function getGroup(floorInfo){
         }
         isInstruction(textElement){
             if(
-                Rect.isWithinMargin(this.cluster.rect, textElement.rect, 2*unit, "t")
+                Rect.isWithinMargin(this.cluster.rect, textElement.rect, largeMargin*unit, "t")
             ){
                 return true
             }
@@ -599,86 +619,30 @@ function getGroup(floorInfo){
             return getAllVerbose(this.instructions).join("\n") + "\n" + this.cluster.getVerbose()
         }
     }
-    
     // ====================== Floor Segments ==========================
-    
-    function getFloorSegments(floor){
+
+    function getSegments(floor){
         let elements = floor.querySelectorAll("*");
         
-    
         let segments = []
         Array.from(elements).forEach(element => {
-            let segment = getSegment(element);
-            if(segment)
-                segments.push(segment)
+
+            if(Segment.isThisType(element)){
+                let segment = Segment.getSegment(element);
+                if(segment)
+                    segments.push(segment)
+            }
         });
     
         return segments
     }
-    function getFloorObj(context, floorPath){
-        return context.querySelector(floorPath);
-    }
-    function getContextObj(contextPath){
-        let context = document
-        if(contextPath.length>0){
-            const iframe = document.body.querySelectorAll(contextPath);
-            context = iframe.contentWindow.document;
-        }
-        return context;
-    }
-    function isLowVis(style) {
-        let filter = style.filter;
-        let opacity = style.opacity;
-    
-        if (filter !== "none" || opacity < "1") {
-            return true;
-        } else {
-            return false;
-        }
-    }
-    function getSegment(el){
-        let segment = getIElement(el);
-        if(segment == null)
-            segment = getTextElement(el)
-        if(segment == null || segment.rect == null)
-            return null
-     
-        return segment
-    }
-    function getElementTagname(el){
-        return el.tagName.toLowerCase();
-    }
-    function getElementText(el) {
-        let directText = '';
-        for (let i = 0; i < el.childNodes.length; i++) {
-            if (el.childNodes[i].nodeType === 3) {
-                directText += el.childNodes[i].nodeValue;
-            }
-        }
-        return directText.trim()
-    }
-    function getIElement(el){
-    
-        const IElementClass = IElementClasses.find(IElementClass=>IElementClass.isThisType(el))
-        if(!IElementClass)
-            return null
-        ielementInstance = new IElementClass(el)
-        return ielementInstance;
-    }
-    function getTextElement(el){
-        if(TextElement.isThisType(el)){
-            return new TextElement(el)
-        }
-        return null
-    }
-    
-    
+
     // ====================== Grouping ==========================
     
     function isRectOnFloorEdge(rect, floorRect){
         // Calculate 10% of floorRect's dimensions
-        let leftPercentage = 0.1 * floorRect.w;
-        let topPercentage = 0.1 * floorRect.h;
+        let leftPercentage = FLOOR_EDGE_PERC * floorRect.w;
+        let topPercentage = FLOOR_EDGE_PERC * floorRect.h;
         let rightPercentage = floorRect.w - leftPercentage;
         let bottomPercentage = floorRect.h - topPercentage;
     
@@ -692,8 +656,6 @@ function getGroup(floorInfo){
             return false;
         }
     }
-    
-    
     function getGroups(floor, segments){
         const floorRect = Rect.elementToRect(floor)
     
@@ -773,23 +735,26 @@ function getGroup(floorInfo){
     
         return groups
     }
-    
-    
-    
+
     // ====================== EXE ==========================
     const IElementClasses = [InputField, SubmitElement, IRadio]
+    const FLOOR_EDGE_PERC = 0.2
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
-    const floor = getFloorObj(getContextObj(contextPath), floorPath)
+    const floor = floorInfo.element
     
-    let segments = getFloorSegments(floor)
+    const segments = getSegments(floor)
+
+    console.log("segments:",segments.length)
     
     // segments.forEach((segment, i)=>{
-    //     highlightElement(segment.element, segment.color, `${segment.labelName}`)
-    // })
+        //     highlightElement(segment.element, segment.color, `${segment.labelName}`)
+        // })
+        
+    const groups = getGroups(floor, segments)
     
-    let groups = getGroups(floor, segments)
-    
+    console.log("groups:",groups.length)
+
     groups.forEach((group,i) => {
         if(i==0){
             highlight(group.rect, "#09E912", "group")
@@ -802,10 +767,21 @@ function getGroup(floorInfo){
         return null
 
     return groups[0].getDict()
+
 }
 
+const HIERARCHY_COEFFICIENT = 10;
+const AREA_COEFFICIENT = 10;
+const POS_COEFFICIENT = 20;
+const smallMargin = 1; 
+const medMargin = 1.5; 
+const largeMargin = 2; 
+
+
+const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
- 
+
+
 const msFloorInfo = getFloorInfo()
 
 console.log("floorInfo:",msFloorInfo)
@@ -815,4 +791,3 @@ const msGroup = getGroup(msFloorInfo)
 const msResult = msGroup
 
 console.log("result:",msResult)
-
