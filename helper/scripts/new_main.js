@@ -99,6 +99,11 @@ function getDirectText(el) {
     }
     return directText.trim()
 }
+function sleep(ms) {
+    var start = new Date().getTime(), expire = start + ms;
+    while (new Date().getTime() < expire) { }
+    return;
+  }
 
 
 class Vis{
@@ -449,8 +454,8 @@ function getGroup(floorInfo){
             this.rect = initSegment.rect
             this.segments = [initSegment]
         }
-        updateRect(element){
-            this.rect = Rect.combineRects([this.rect, element.rect])
+        updateRect(segment){
+            this.rect = Rect.combineRects([this.rect, segment.rect])
         }
         isGroup(segment){
             if(
@@ -558,6 +563,17 @@ function getGroup(floorInfo){
             return false
         }
     }
+    function highlightGroups(groups){
+        groups.forEach((group,i) => {
+            if(i==0){
+                highlight(group.rect, "#09E912", `${i}`)
+            }else if(i==groups.length-1){
+                highlight(group.rect, "#fc0303", `${i}`)
+            }else{
+                highlight(group.rect, "#ace010", `${i}`)
+            }
+        });
+    }
     // ====================== Floor Segments ==========================
 
     function getSegments(floor){
@@ -579,11 +595,11 @@ function getGroup(floorInfo){
     // ====================== Grouping ==========================
     
     function isRectOnFloorEdge(rect, floorRect){
-        let leftSide = FLOOR_EDGE_PERC * floorRect.w;
-        let topSide = FLOOR_EDGE_PERC * floorRect.h;
+        let leftSide = FLOOR_EDGE * unit;
+        let topSide = FLOOR_EDGE * unit;
         let rightSide = floorRect.w - leftSide;
         let bottomSide = floorRect.h - topSide;
-    
+
         if (rect.cx < leftSide ||
             rect.cx > rightSide ||
             rect.cy < topSide ||
@@ -593,6 +609,7 @@ function getGroup(floorInfo){
             return false;
         }
     }
+
     function getGroups(floor, segments){
         const floorRect = Rect.elementToRect(floor)
     
@@ -613,7 +630,10 @@ function getGroup(floorInfo){
                     if(ielement.group.isGroup(segment)){
                         ielement.group.addToGroup(segment)
                         segment.setGroup(ielement.group)
+                     
                     }
+
+
                 });
             }
         });
@@ -629,13 +649,13 @@ function getGroup(floorInfo){
 
         
         groups.sort((a,b)=>{
-            const aOnEdge = isRectOnFloorEdge(a, floorRect);
-            const bOnEdge = isRectOnFloorEdge(b, floorRect);
+            const aOnEdge = isRectOnFloorEdge(a.rect, floorRect);
+            const bOnEdge = isRectOnFloorEdge(b.rect, floorRect);
             if(!aOnEdge && bOnEdge){
-                return 1
+                return -1
             }
             if(aOnEdge && !bOnEdge){
-                return -1
+                return 1
             }
             if(!aOnEdge && !bOnEdge){
                 if(a.rect.cy > b.rect.cy){
@@ -650,14 +670,12 @@ function getGroup(floorInfo){
     
         })
     
-        
     
         return groups
     }
 
     // ====================== EXE ==========================
     const IElementClasses = [InputField, SubmitElement, IRadio]
-    const FLOOR_EDGE_PERC = 0.2
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
@@ -672,15 +690,9 @@ function getGroup(floorInfo){
         
     const groups = getGroups(floor, segments)
     
-    console.log("groups:",groups.length)
+    console.log("groups:",groups)
 
-    groups.forEach((group,i) => {
-        if(i==0){
-            highlight(group.rect, "#09E912", "group")
-        }else{
-            highlight(group.rect, "#ff0000", "group")
-        }
-    });
+    highlightGroups(groups)
     
     if(groups.length == 0)
         return null
@@ -695,8 +707,11 @@ const HIERARCHY_COEFFICIENT = 10;
 const AREA_COEFFICIENT = 10;
 const POS_COEFFICIENT = 10;
 
-const innerGroupMargin = 1.5; 
-const instructionMargin = 2; 
+const innerGroupMargin = 4; 
+const instructionMargin = 6; 
+
+const FLOOR_EDGE = 10
+
 
 
 const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
