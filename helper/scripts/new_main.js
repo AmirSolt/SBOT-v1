@@ -1,6 +1,3 @@
-function getAllVerbose(elements){
-    return elements.map(ielement=>ielement.getVerbose())
-}
 function highlightElement(target, color, text){
     console.log(target)
     // console.log(target.style)
@@ -235,12 +232,13 @@ class FloorInfo{
     getFloorPosScore(rect){
     
         let xScore = FloorInfo.getDistanceRatio(rect.cx, screen.cx, screen.w);
-        let yScore = FloorInfo.getDistanceRatio(rect.cy, screen.cy, screen.h);
+        // let yScore = FloorInfo.getDistanceRatio(rect.cy, screen.cy, screen.h);
     
         xScore = 1-xScore
-        yScore = 1-yScore
+        // yScore = 1-yScore
     
-        return ((xScore*0.5) + (yScore*0.5)) * POS_COEFFICIENT
+        // return ((xScore*0.5) + (yScore*0.5)) * POS_COEFFICIENT
+        return xScore * POS_COEFFICIENT
     }
     getFloorAreaScore(rect, bodyRect){
         const areaRatio = rect.area/bodyRect.area;
@@ -367,6 +365,7 @@ function getGroup(floorInfo){
             this.verboseName = ""
             this.color = "white"
             this.rect = Rect.elementToRect(element)
+            this.group = null
         }
         static isThisType(el){
             const rect = Rect.elementToRect(el)
@@ -376,6 +375,9 @@ function getGroup(floorInfo){
             if(Vis.isLowVis(style))
                 return false
             return true
+        }
+        setGroup(group){
+            this.group = group
         }
         getVerbose(){
             throw new Error('==== Abstract class ====');
@@ -420,15 +422,18 @@ function getGroup(floorInfo){
     class IElement extends Segment{
         constructor(element){
             super(element);
-            this.label = null
             this.color = "blue"
-            this.cluster = null
+            this.placeHolder = ""
         }
         getVerbose(){
-            let text = `[Input: ${this.labelName}]`+" : "
-            if(this.label!=null)
-                text += this.label.getVerbose()
-            return text
+            let text = ` ${this.placeHolder} [${this.verboseName} Path:${this.getPath()}]`
+            return text.trim()
+        }
+        getDict(){
+            return{
+                type:this.verboseName,
+                path:this.getPath(),
+            }
         }
         static getIElement(el){
     
@@ -450,7 +455,18 @@ function getGroup(floorInfo){
         isGroup(segment){
             if(
                 segment instanceof Segment &&
-                Rect.isWithinMargin(this.rect, segment.rect, largeMargin*unit, "l,r,t")
+                !(segment instanceof SubmitElement) &&
+                segment.group == null &&
+                Rect.isWithinMargin(this.rect, segment.rect, innerGroupMargin*unit, "l,r,t,b")
+            ){
+                return true
+            }
+            return false
+        }
+        isInstruction(textElement){
+            if(
+                textElement.group == null &&
+                Rect.isWithinMargin(this.rect, textElement.rect, instructionMargin*unit, "t")
             ){
                 return true
             }
@@ -464,14 +480,25 @@ function getGroup(floorInfo){
             return {
                 "context_path":contextPath,
                 "floor_path":floorPath,
-                "action_type":"uknown",
                 "verbose":this.getVerbose(),
-                "instructions": getAllVerbose(this.instructions).join("\n"),
-                "ielements":this.cluster.getIElementsDict(),
+                "text_type_only":this.getTextTypeOnlyVerbose(),
+                "ielements":this.getIElementsDict(),
             }
         }
+        getSegmentsVerbose(segments){
+            return segments.map(segment=>segment.getVerbose())
+        }
         getVerbose(){
-            return getAllVerbose(this.instructions).join("\n") + "\n" + this.cluster.getVerbose()
+            // based on x and y \n
+            return this.getSegmentsVerbose(this.segments).join("\n")
+        }
+        getTextTypeOnlyVerbose(){
+            const textElements = this.segments.filter(segment=> segment instanceof TextElement)
+            return this.getSegmentsVerbose(textElements).join(". ")
+        }
+        getIElementsDict(){
+            const ielements = this.segments.filter(segment=> segment instanceof IElement)
+            return ielements.map(ielement=>ielement.getDict())
         }
     }
 
@@ -552,19 +579,17 @@ function getGroup(floorInfo){
     // ====================== Grouping ==========================
     
     function isRectOnFloorEdge(rect, floorRect){
-        // Calculate 10% of floorRect's dimensions
-        let leftPercentage = FLOOR_EDGE_PERC * floorRect.w;
-        let topPercentage = FLOOR_EDGE_PERC * floorRect.h;
-        let rightPercentage = floorRect.w - leftPercentage;
-        let bottomPercentage = floorRect.h - topPercentage;
+        let leftSide = FLOOR_EDGE_PERC * floorRect.w;
+        let topSide = FLOOR_EDGE_PERC * floorRect.h;
+        let rightSide = floorRect.w - leftSide;
+        let bottomSide = floorRect.h - topSide;
     
-        // check the rect's center if it is in 10% edge of floorRect
-        if (rect.cx > (floorRect.x + leftPercentage) && rect.cx < (floorRect.x + rightPercentage)
-            && rect.cy > (floorRect.y + topPercentage) && rect.cy < (floorRect.y + bottomPercentage)) {
-            // rect's center falls within the 10% range of each side of floorRect
+        if (rect.cx < leftSide ||
+            rect.cx > rightSide ||
+            rect.cy < topSide ||
+            rect.cy >  bottomSide ) {
             return true;
         } else {
-            // rect 's center does not falls within the 10% range of any side of floorRect
             return false;
         }
     }
@@ -574,25 +599,35 @@ function getGroup(floorInfo){
         const ielements = segments.filter(element => element instanceof IElement); 
         const textElements = segments.filter(element => element instanceof TextElement); 
     
-        // ============ grouping ==============
-        let clusters = []
+        // ============ lvl1 grouping ==============
+        let groups = []
         ielements.forEach(ielement => {
-            if(!ielement.cluster){
-                const cluster = new Cluster()
-                cluster.addElement(ielement)
-                ielement.setCluster(cluster)
-                clusters.push(cluster)
+            if(ielement.group == null){
+                const group = new Group(ielement)
+                ielement.setGroup(group)
+                groups.push(group)
+
+                segments.forEach(segment => {
+                    if(segment.group != null)
+                        return
+                    if(ielement.group.isGroup(segment)){
+                        ielement.group.addToGroup(segment)
+                        segment.setGroup(ielement.group)
+                    }
+                });
             }
-            ielements.forEach(ielement2 => {
-                if(ielement2.cluster)
-                    return
-                if(ielement.isClustter(ielement2)){
-                    ielement.cluster.addElement(ielement2)
-                    ielement2.setCluster(ielement.cluster)
-                }
-            });
         });
-    
+
+        // ============ lvl2 grouping ==============
+        groups.forEach(group => {
+            const instructionIndex = textElements.findIndex(textElement=>group.isInstruction(textElement))
+            if(instructionIndex==-1)
+                return
+            group.addToGroup(textElements[instructionIndex])
+            textElements.splice(instructionIndex,1)
+        });
+
+        
         groups.sort((a,b)=>{
             const aOnEdge = isRectOnFloorEdge(a, floorRect);
             const bOnEdge = isRectOnFloorEdge(b, floorRect);
@@ -658,10 +693,10 @@ function getGroup(floorInfo){
 
 const HIERARCHY_COEFFICIENT = 10;
 const AREA_COEFFICIENT = 10;
-const POS_COEFFICIENT = 20;
-const smallMargin = 1; 
-const medMargin = 1.5; 
-const largeMargin = 2; 
+const POS_COEFFICIENT = 10;
+
+const innerGroupMargin = 1.5; 
+const instructionMargin = 2; 
 
 
 const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
