@@ -523,15 +523,27 @@ function getTopGroups(floorInfo){
             this.updateRect(segment)
         }
         getSegmentsVerbose(segments){
-            return segments.map(segment=>segment.getVerbose())
+            // return segments.map(segment=>segment.getVerbose())
+            return segments
+                .sort((a, b) => {
+                    return (a.rect.x*Math.pow(a.rect.y+1000,3)) - (b.rect.x*Math.pow(b.rect.y+1000,3))
+                })
+                .reduce((acc, curr, index, arr) => {
+                    let text = curr.getVerbose();
+                    if (index !== arr.length - 1 && 
+                        (curr.rect.y + curr.rect.h) === (arr[index + 1].rect.y + arr[index + 1].rect.h)) {
+                            return acc + text + " ";
+                    }
+                    return acc + text + "\n";
+                }, "");
         }
         getVerbose(){
             // based on x and y \n
-            return this.getSegmentsVerbose(this.segments).join("\n")
+            return this.getSegmentsVerbose(this.segments)
         }
         getTextTypeOnlyVerbose(){
             const textElements = this.segments.filter(segment=> segment instanceof TextElement)
-            return this.getSegmentsVerbose(textElements).join(". ")
+            return this.getSegmentsVerbose(textElements)
         }
         getImageElementDict(){
             const images = this.segments.filter(segment=> segment instanceof ImageElement)
@@ -736,8 +748,8 @@ function getTopGroups(floorInfo){
     console.log("segments:",segments.length)
     
     // segments.forEach((segment, i)=>{
-        //     highlightElement(segment.element, segment.color, `${segment.labelName}`)
-        // })
+    //         highlightElement(segment.element, segment.color, `${segment.labelName}`)
+    //     })
         
     const groups = getGroups(floor, segments)
     
