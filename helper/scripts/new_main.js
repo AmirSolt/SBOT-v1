@@ -501,7 +501,7 @@ function getTopGroups(floorInfo){
         isGroup(segment){
             if(
                 segment instanceof Segment &&
-                !(segment instanceof SubmitElement) &&
+                !(segment instanceof ISubmit) &&
                 segment.group == null &&
                 Rect.isWithinMargin(this.rect, segment.rect, innerGroupMargin*unit, "l,r,t,b")
             ){
@@ -573,7 +573,7 @@ function getTopGroups(floorInfo){
         }
     }
 
-    class SubmitElement extends IElement{
+    class ISubmit extends IElement{
         constructor(element){
             super(element);
             this.labelName = "Submit"
@@ -588,14 +588,15 @@ function getTopGroups(floorInfo){
                     element.getAttribute("type") == "submit"
                 ) ||
                 getElementTagname(element) == "button"
+                
             ) return true
             return false
         }
     }
-    class IRadio extends IElement{
+    class IOption extends IElement{
         constructor(element){
             super(element);
-            this.labelName = "Radio"
+            this.labelName = "Option"
             this.verboseName = "Option"
             this.color = "red"
         }
@@ -603,18 +604,25 @@ function getTopGroups(floorInfo){
             if(
                 (
                     getElementTagname(element) == "input" &&
-                    element.getAttribute("type") == "radio"
-                ) 
-                // if it's clickable from css or js point of view
+                    (
+                        element.getAttribute("type") == "radio" ||
+                        element.getAttribute("type") == "checkbox" 
+                    )
+                ) ||
+                IOption.isInteractable(element)
             ) return true
             return false
         }
+        static isInteractable(el){
+            const style = window.getComputedStyle(el);
+            return style.cursor === 'pointer' || style['pointer-events'] === 'auto';
+        }
     }
-    class InputField extends IElement{
+    class IField extends IElement{
         constructor(element){
             super(element);
             this.labelName = "Field"
-            this.verboseName = "Text Field"
+            this.verboseName = "Field"
             this.placeHolder = ""
             this.value = ""
         }
@@ -622,13 +630,59 @@ function getTopGroups(floorInfo){
             if(
                 (
                     getElementTagname(element) == "input" &&
-                    element.getAttribute("type") == "text"
+                    (
+                        element.getAttribute("type") == "text" ||
+                        element.getAttribute("type") == "date" ||
+                        element.getAttribute("type") == "email" ||
+                        element.getAttribute("type") == "number" ||
+                        element.getAttribute("type") == "password" ||
+                        element.getAttribute("type") == "range" ||
+                        element.getAttribute("type") == "tel" ||
+                        element.getAttribute("type") == "email"
+                    )
                 ) ||
                 getElementTagname(element) == "textarea"
             ) return true
             return false
         }
     }
+    class IDropdown extends IElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Dropdown"
+            this.verboseName = "Dropdown"
+            this.value = ""
+            this.options = this.getOptions()
+        }
+        static isThisType(element){
+            if(
+                (
+                    getElementTagname(element) == "select"
+                ) 
+            ) return true
+            return false
+        }
+        getOptions(){
+            return Array.from(this.element.options).map(option=>getDirectText(option))
+        }
+        getDict(){
+            return{
+                type:this.verboseName,
+                path:this.getPath(),
+                options:this.options
+            }
+        }
+        getVerbose(){
+            let text = `[input:${this.verboseName} id:${this.group.getIElementIndex(this)}`
+            this.options.forEach(option=>{
+                text+=` Option: ${option}`
+            })
+            text+="]\n"
+            return text.trim()
+        }
+    }
+
+    
     function highlightGroups(groups){
         groups.forEach((group,i) => {
             if(i==0){
@@ -738,7 +792,7 @@ function getTopGroups(floorInfo){
     }
 
     // ====================== EXE ==========================
-    const IElementClasses = [InputField, SubmitElement, IRadio]
+    const IElementClasses = [IField, ISubmit, IOption, IDropdown]
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
