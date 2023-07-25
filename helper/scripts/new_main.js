@@ -361,7 +361,7 @@ function getFloorInfo(){
 }
 
 
-function getGroup(floorInfo){
+function getTopGroups(floorInfo){
 
     class Segment{
         constructor(element){
@@ -394,6 +394,8 @@ function getGroup(floorInfo){
             let segment = IElement.getIElement(el);
             if(segment == null)
                 segment = TextElement.getTextElement(el)
+            if(segment == null)
+                segment = ImageElement.getImageElement(el)
             if(segment == null || segment.rect == null)
                 return null
             return segment
@@ -402,7 +404,6 @@ function getGroup(floorInfo){
     class TextElement extends Segment{
         constructor(element){
             super(element);
-            this.element = element
             this.labelName = "Text"
             this.verboseName = "Text"
             this.color = "green"
@@ -431,7 +432,7 @@ function getGroup(floorInfo){
             this.placeHolder = ""
         }
         getVerbose(){
-            let text = ` ${this.placeHolder} [${this.verboseName} Path:${this.getPath()}]`
+            let text = ` ${this.placeHolder} [input:${this.verboseName} id:${this.group.getIElementIndex(this)}]`
             return text.trim()
         }
         getDict(){
@@ -446,6 +447,46 @@ function getGroup(floorInfo){
             if(!IElementClass)
                 return null
             return new IElementClass(el);
+        }
+    }
+    class ImageElement extends Segment{
+        constructor(element){
+            super(element);
+            this.labelName = "Image"
+            this.verboseName = "Image"
+            this.color = "red"
+        }
+        static isThisType(element){
+            if(
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    ImageElement.isImageMinSize(element)
+                ) 
+            ) return true
+            return false
+        }
+        getDict(){
+            return{
+                src:this.element.getAttribute("src") ,
+                path:this.getPath(),
+            }
+        }
+        getVerbose(){
+            return `[${this.verboseName}]`
+        }
+        static isImageMinSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
+        static getImageElement(el){
+            if(ImageElement.isThisType(el)){
+                return new ImageElement(el)
+            }
+            return null
         }
     }
     class Group{
@@ -481,15 +522,6 @@ function getGroup(floorInfo){
             this.segments.push(segment)
             this.updateRect(segment)
         }
-        getDict(){
-            return {
-                "context_path":contextPath,
-                "floor_path":floorPath,
-                "verbose":this.getVerbose(),
-                "text_type_only":this.getTextTypeOnlyVerbose(),
-                "ielements":this.getIElementsDict(),
-            }
-        }
         getSegmentsVerbose(segments){
             return segments.map(segment=>segment.getVerbose())
         }
@@ -501,9 +533,31 @@ function getGroup(floorInfo){
             const textElements = this.segments.filter(segment=> segment instanceof TextElement)
             return this.getSegmentsVerbose(textElements).join(". ")
         }
+        getImageElementDict(){
+            const images = this.segments.filter(segment=> segment instanceof ImageElement)
+            return images.map(image=>image.getDict())
+        }
         getIElementsDict(){
             const ielements = this.segments.filter(segment=> segment instanceof IElement)
             return ielements.map(ielement=>ielement.getDict())
+        }
+        getIElementIndex(ielement){
+            const ielements = this.segments.filter(segment=> segment instanceof IElement)
+            return ielements.findIndex(iel=>iel===ielement)
+        }
+        getID(){
+            return `${parseInt(this.rect.x)}:${parseInt(this.rect.y)}`
+        }
+        getDict(){
+            return {
+                "id":this.getID(),
+                "context_path":contextPath,
+                "floor_path":floorPath,
+                "verbose":this.getVerbose(),
+                "text_type_only":this.getTextTypeOnlyVerbose(),
+                "image_elements":this.getImageElementDict(),
+                "ielements":this.getIElementsDict(),
+            }
         }
     }
 
@@ -630,10 +684,7 @@ function getGroup(floorInfo){
                     if(ielement.group.isGroup(segment)){
                         ielement.group.addToGroup(segment)
                         segment.setGroup(ielement.group)
-                     
                     }
-
-
                 });
             }
         });
@@ -697,7 +748,7 @@ function getGroup(floorInfo){
     if(groups.length == 0)
         return null
 
-    return groups[0].getDict()
+    return groups.slice(0,3).map(group=>group.getDict())
 
 }
 
@@ -709,6 +760,7 @@ const POS_COEFFICIENT = 10;
 
 const innerGroupMargin = 4; 
 const instructionMargin = 6; 
+const minImageSize = 10; 
 
 const FLOOR_EDGE = 10
 
@@ -722,8 +774,8 @@ const msFloorInfo = getFloorInfo()
 
 console.log("floorInfo:",msFloorInfo)
 
-const msGroup = getGroup(msFloorInfo)
+const msGroups = getTopGroups(msFloorInfo)
 
-const msResult = msGroup
+const msResult = msGroups
 
 console.log("result:",msResult)
