@@ -587,7 +587,10 @@ function getTopGroups(floorInfo){
                     getElementTagname(element) == "input" &&
                     element.getAttribute("type") == "submit"
                 ) ||
-                getElementTagname(element) == "button"
+                (
+                    getElementTagname(element) == "button" &&
+                    element.getAttribute("type") == "submit"
+                ) 
                 
             ) return true
             return false
@@ -599,6 +602,7 @@ function getTopGroups(floorInfo){
             this.labelName = "Option"
             this.verboseName = "Option"
             this.color = "red"
+            this.placeHolder = getDirectText(element)
         }
         static isThisType(element){
             if(
@@ -613,9 +617,19 @@ function getTopGroups(floorInfo){
             ) return true
             return false
         }
+        getVerbose(){
+            let text = ` ${this.placeHolder} [input:${this.verboseName} id:${this.group.getIElementIndex(this)}]`
+            return text.trim()
+        }
         static isInteractable(el){
             const style = window.getComputedStyle(el);
-            return style.cursor === 'pointer' || style['pointer-events'] === 'auto';
+            const tagName = getElementTagname(el);
+            return (
+                tagName != "input" &&
+                tagName != "button" &&
+                tagName != "select" &&
+                style.cursor === 'pointer'
+            )
         }
     }
     class IField extends IElement{
@@ -799,7 +813,7 @@ function getTopGroups(floorInfo){
     
     const segments = getSegments(floor)
 
-    console.log("segments:",segments.length)
+    console.log("segments:",segments)
     
     // segments.forEach((segment, i)=>{
     //         highlightElement(segment.element, segment.color, `${segment.labelName}`)
@@ -824,8 +838,8 @@ const HIERARCHY_COEFFICIENT = 10;
 const AREA_COEFFICIENT = 10;
 const POS_COEFFICIENT = 10;
 
-const innerGroupMargin = 4; 
-const instructionMargin = 6; 
+const innerGroupMargin = 2; 
+const instructionMargin = 4; 
 const minImageSize = 10; 
 
 const FLOOR_EDGE = 10
