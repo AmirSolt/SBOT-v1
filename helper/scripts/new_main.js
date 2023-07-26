@@ -498,6 +498,9 @@ function getTopGroups(floorInfo){
         updateRect(segment){
             this.rect = Rect.combineRects([this.rect, segment.rect])
         }
+        isSoloGroup(initSegment){
+            return initSegment instanceof ISubmit
+        }
         isGroup(segment){
             if(
                 segment instanceof Segment &&
@@ -526,15 +529,26 @@ function getTopGroups(floorInfo){
             // return segments.map(segment=>segment.getVerbose())
             return segments
                 .sort((a, b) => {
-                    return (a.rect.x*Math.pow(a.rect.y+1000,3)) - (b.rect.x*Math.pow(b.rect.y+1000,3))
+                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
+                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
+                    if(!isYLapping){
+                        return a.rect.y - b.rect.y
+                    }
+                    return a.rect.x - b.rect.x
                 })
                 .reduce((acc, curr, index, arr) => {
                     let text = curr.getVerbose();
-                    if (index !== arr.length - 1 && 
-                        (curr.rect.y + curr.rect.h) === (arr[index + 1].rect.y + arr[index + 1].rect.h)) {
-                            return acc + text + " ";
+                    let divider = "";
+                    if(index>0){
+                        const lastSegment = arr[index-1]
+                        const isYLapping = Rect.areYBoundsOverlaping(lastSegment.rect, curr.rect);
+                        if(!isYLapping){
+                            divider = "\n"
+                        }else{
+                            divider = " "
+                        }
                     }
-                    return acc + text + "\n";
+                    return acc + divider + text;
                 }, "");
         }
         getVerbose(){
@@ -628,6 +642,7 @@ function getTopGroups(floorInfo){
                 tagName != "input" &&
                 tagName != "button" &&
                 tagName != "select" &&
+                !( tagName == "a" && el.getAttribute("href") == null) &&
                 style.cursor === 'pointer'
             )
         }
@@ -728,16 +743,14 @@ function getTopGroups(floorInfo){
 
     // ====================== Grouping ==========================
     
-    function isRectOnFloorEdge(rect, floorRect){
+    function isRectOnEdge(rect, floorRect){
         let leftSide = FLOOR_EDGE * unit;
         let topSide = FLOOR_EDGE * unit;
         let rightSide = floorRect.w - leftSide;
-        let bottomSide = floorRect.h - topSide;
 
-        if (rect.cx < leftSide ||
-            rect.cx > rightSide ||
-            rect.cy < topSide ||
-            rect.cy >  bottomSide ) {
+        if (rect.x < leftSide ||
+            rect.x + rect.w > rightSide ||
+            rect.y < topSide ) {
             return true;
         } else {
             return false;
@@ -757,7 +770,8 @@ function getTopGroups(floorInfo){
                 const group = new Group(ielement)
                 ielement.setGroup(group)
                 groups.push(group)
-
+                if(group.isSoloGroup(ielement))
+                    return
                 segments.forEach(segment => {
                     if(segment.group != null)
                         return
@@ -777,11 +791,10 @@ function getTopGroups(floorInfo){
             group.addToGroup(textElements[instructionIndex])
             textElements.splice(instructionIndex,1)
         });
-
         
         groups.sort((a,b)=>{
-            const aOnEdge = isRectOnFloorEdge(a.rect, floorRect);
-            const bOnEdge = isRectOnFloorEdge(b.rect, floorRect);
+            const aOnEdge = isRectOnEdge(a.rect, screen);
+            const bOnEdge = isRectOnEdge(b.rect, screen);
             if(!aOnEdge && bOnEdge){
                 return -1
             }
@@ -789,13 +802,7 @@ function getTopGroups(floorInfo){
                 return 1
             }
             if(!aOnEdge && !bOnEdge){
-                if(a.rect.cy > b.rect.cy){
-                    return 1
-                }
-                if(a.rect.cy < b.rect.cy){
-                    return -1
-                }
-                return 0
+                return a.rect.cy - b.rect.cy
             }
             return 0
     
@@ -813,7 +820,7 @@ function getTopGroups(floorInfo){
     
     const segments = getSegments(floor)
 
-    console.log("segments:",segments)
+    console.log("segments:",segments.length)
     
     // segments.forEach((segment, i)=>{
     //         highlightElement(segment.element, segment.color, `${segment.labelName}`)
@@ -842,7 +849,7 @@ const innerGroupMargin = 2;
 const instructionMargin = 4; 
 const minImageSize = 10; 
 
-const FLOOR_EDGE = 10
+const FLOOR_EDGE = 2
 
 
 
