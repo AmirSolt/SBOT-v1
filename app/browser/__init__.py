@@ -101,11 +101,13 @@ class Browser(uc.Chrome):
         self.__save_page_html(page_html)
         return page_html
     
-    def get_parsed_group(self):
-        parsed_group = self.execute_script(PARSER_ELEMENTS_SCRIPT)
+    def get_parsed_groups(self)->list[dict]:
+        parsed_groups = self.execute_script(PARSER_ELEMENTS_SCRIPT)
+        if not parsed_groups:
+            parsed_groups = []
         utils.create_dir_if_not_exist(self.parsed_html_dir)
-        self.__save_parsed_html(parsed_group)
-        return parsed_group
+        self.__save_parsed_html(parsed_groups)
+        return parsed_groups
         
         
     

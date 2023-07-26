@@ -5,7 +5,7 @@ if __name__ == '__main__':
 
 
     # parralell
-    for worker_info in get_worker_infos()[0]:
+    for worker_info in [get_worker_infos()[0]]:
         
         worker = Worker(worker_info)
         try:

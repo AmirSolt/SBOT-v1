@@ -115,7 +115,7 @@ class Profile:
         
 
     def __generate_perm_memory(self):
-        for key, value in self.worker_info.memory:
+        for key, value in self.worker_info.memory.items():
             self.__add_to_perm_memory(key, value)
    
         

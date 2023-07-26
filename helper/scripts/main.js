@@ -675,7 +675,7 @@ function getTopGroups(floorInfo){
                 tagName != "input" &&
                 tagName != "button" &&
                 tagName != "select" &&
-                !( tagName == "a" && el.getAttribute("href") == null) &&
+                !( tagName == "a" && el.getAttribute("href") != null) &&
                 style.cursor === 'pointer'
             )
         }
