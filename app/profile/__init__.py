@@ -1,7 +1,10 @@
 from helper import utils, config
 from funcs import AI
+from static.worker_infos import WorkerInfo
 
 
+
+COUNT_RETURNED_MEMORY = 4
 
 
 class Profile:
@@ -18,7 +21,9 @@ class Profile:
     
     
     
-    def __init__(self, worker_id:str) -> None:
+    def __init__(self, worker_id:str, worker_info:WorkerInfo) -> None:
+        
+        self.worker_info = worker_info
         
         self.perm_memory:list[dict] = []
         self.survey_memory:list[dict] = []
@@ -56,19 +61,21 @@ class Profile:
             utils.write_file(self.perm_memory_path, self.perm_memory)
         
         
-    def get_parsed_group_context(self, parsed_group)->str:
-        context = []
+    # def get_parsed_group_context(self, parsed_group)->str:
+    #     context = []
         
-        for ielement in parsed_group["ielements"]:
-            text = parsed_group["instructions"]
-            text += "" if not ielement["label"] else " " + ielement["label"]
+    #     for ielement in parsed_group["ielements"]:
+    #         text = parsed_group["instructions"]
+    #         text += "" if not ielement["label"] else " " + ielement["label"]
             
-            context.extend(self.get_contexts(text))
+    #         context.extend(self.get_contexts(text))
             
-        return "\n".join(context)
+    #     return "\n".join(context)
         
+    def get_context(self, text:str)->str:
+        return "\n".join(self.get_all_contexts(text)[:COUNT_RETURNED_MEMORY])
         
-    def get_contexts(self, text:str)->list[str]:
+    def get_all_contexts(self, text:str)->list[str]:
         """
         returns a list of strings. each string is a context item that is related to the given text.
         """
@@ -91,7 +98,7 @@ class Profile:
         if not embeddings:
             return []
         
-        memory_items = AI.get_similar_items(memory, embeddings, target_embedding, 0.85, "cosine")
+        memory_items = AI.get_similar_items(memory, embeddings, target_embedding, 0, "cosine")
         return memory_items
         
         
@@ -108,21 +115,17 @@ class Profile:
         
 
     def __generate_perm_memory(self):
-        print("========")
-        email = input("Email:")
-        password = input("Password:")
-        print("========")
-        self.__add_to_perm_memory("email", email)
-        self.__add_to_perm_memory("password", password)
-        self.__add_to_perm_memory("what is your first name?", "jack")
+        for key, value in self.worker_info.memory:
+            self.__add_to_perm_memory(key, value)
+   
         
     
     def __add_to_perm_memory(self, question:str, answer:str):
         embedding = self.__embed_memory_item(question, answer)
         self.perm_memory.append({
-             "question":question,
-             "answer":answer,
-             "embedding":embedding
+            "question":question,
+            "answer":answer,
+            "embedding":embedding
         })
     
     

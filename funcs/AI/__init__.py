@@ -72,20 +72,13 @@ def recommendations_from_embeddings(
 
 
 
-def answer_parsed_group(parsed_group, context):
-    messages = get_chat_messages(parsed_group, context)
+def answer_parsed_group(group_verbose, context):
+    messages = get_chat_messages(group_verbose, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
-    answer = chat_completion.choices[0].message.content
-    
-    print("=============")
-    print("context:",context)
-    print("verbose:",parsed_group["verbose"])
-    print("answer:",parsed_group["answer"])
-    print("=============")
-    
+    answer = chat_completion.choices[0].message.content    
     return answer
 
-def get_chat_messages(parsed_group, context):
+def get_chat_messages(group_verbose, context):
     messages = []
     
     system_message = CHAT_INSTRUCTIONS 
@@ -95,6 +88,6 @@ def get_chat_messages(parsed_group, context):
     {"role": "system", "content": system_message}
     )
     messages.append(
-    {"role": "user", "content": parsed_group["verbose"]}
+    {"role": "user", "content": group_verbose}
     )
     return messages

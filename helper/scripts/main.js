@@ -1,6 +1,3 @@
-function getAllVerbose(elements){
-    return elements.map(ielement=>ielement.getVerbose())
-}
 function highlightElement(target, color, text){
     console.log(target)
     // console.log(target.style)
@@ -102,6 +99,11 @@ function getDirectText(el) {
     }
     return directText.trim()
 }
+function sleep(ms) {
+    var start = new Date().getTime(), expire = start + ms;
+    while (new Date().getTime() < expire) { }
+    return;
+  }
 
 
 class Vis{
@@ -225,8 +227,6 @@ class FloorInfo{
             return false
         if(Vis.isLowVis(style))
             return false
-        if(!Vis.hasBG(style))
-            return false
         if(!Vis.hasInnerText(el))
             return false
         return true
@@ -237,12 +237,13 @@ class FloorInfo{
     getFloorPosScore(rect){
     
         let xScore = FloorInfo.getDistanceRatio(rect.cx, screen.cx, screen.w);
-        let yScore = FloorInfo.getDistanceRatio(rect.cy, screen.cy, screen.h);
+        // let yScore = FloorInfo.getDistanceRatio(rect.cy, screen.cy, screen.h);
     
         xScore = 1-xScore
-        yScore = 1-yScore
+        // yScore = 1-yScore
     
-        return ((xScore*0.5) + (yScore*0.5)) * POS_COEFFICIENT
+        // return ((xScore*0.5) + (yScore*0.5)) * POS_COEFFICIENT
+        return xScore * POS_COEFFICIENT
     }
     getFloorAreaScore(rect, bodyRect){
         const areaRatio = rect.area/bodyRect.area;
@@ -359,7 +360,8 @@ function getFloorInfo(){
     
 }
 
-function getGroup(floorInfo){
+
+function getTopGroups(floorInfo){
 
     class Segment{
         constructor(element){
@@ -368,6 +370,7 @@ function getGroup(floorInfo){
             this.verboseName = ""
             this.color = "white"
             this.rect = Rect.elementToRect(element)
+            this.group = null
         }
         static isThisType(el){
             const rect = Rect.elementToRect(el)
@@ -378,7 +381,13 @@ function getGroup(floorInfo){
                 return false
             return true
         }
+        setGroup(group){
+            this.group = group
+        }
         getVerbose(){
+            throw new Error('==== Abstract class ====');
+        }
+        getTextOnlyVerbose(){
             throw new Error('==== Abstract class ====');
         }
         getPath(){
@@ -388,6 +397,8 @@ function getGroup(floorInfo){
             let segment = IElement.getIElement(el);
             if(segment == null)
                 segment = TextElement.getTextElement(el)
+            if(segment == null)
+                segment = ImageElement.getImageElement(el)
             if(segment == null || segment.rect == null)
                 return null
             return segment
@@ -396,7 +407,6 @@ function getGroup(floorInfo){
     class TextElement extends Segment{
         constructor(element){
             super(element);
-            this.element = element
             this.labelName = "Text"
             this.verboseName = "Text"
             this.color = "green"
@@ -411,6 +421,9 @@ function getGroup(floorInfo){
         getVerbose(){
             return this.text
         }
+        getTextOnlyVerbose(){
+            return this.text
+        }
         static getTextElement(el){
             if(TextElement.isThisType(el)){
                 return new TextElement(el)
@@ -421,37 +434,21 @@ function getGroup(floorInfo){
     class IElement extends Segment{
         constructor(element){
             super(element);
-            this.label = null
             this.color = "blue"
-            this.cluster = null
-        }
-        isLabel(textElement){
-            throw new Error('==== Abstract class ====');
-        }
-        setLabel(textElement){
-            textElement.labelName = "Label"
-            textElement.verboseName = "Label"
-            textElement.color = "purple"
-            this.label = textElement
-        }
-        isClustter(ielement){
-            throw new Error('==== Abstract class ====');
-        }
-        setCluster(cluster){
-            this.cluster = cluster
-        }
-        getOuterRect(){
-            const rects = [this.rect]
-            if(this.label!=null){
-                rects.push(this.label.rect)
-            }
-            return Rect.combineRects(rects)
+            this.placeHolder = ""
         }
         getVerbose(){
-            let text = `[Input: ${this.labelName}]`+" : "
-            if(this.label!=null)
-                text += this.label.getVerbose()
-            return text
+            let text = ` ${this.placeHolder} [input:${this.verboseName} id:${this.group.getIElementIndex(this)}]`
+            return text.trim()
+        }
+        getTextOnlyVerbose(){
+            return this.placeHolder
+        }
+        getDict(){
+            return{
+                type:this.verboseName,
+                path:this.getPath(),
+            }
         }
         static getIElement(el){
     
@@ -461,7 +458,166 @@ function getGroup(floorInfo){
             return new IElementClass(el);
         }
     }
-    class SubmitElement extends IElement{
+    class ImageElement extends Segment{
+        constructor(element){
+            super(element);
+            this.labelName = "Image"
+            this.verboseName = "Image"
+            this.color = "red"
+        }
+        static isThisType(element){
+            if(
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    ImageElement.isImageMinSize(element)
+                ) 
+            ) return true
+            return false
+        }
+        getDict(){
+            return{
+                src:this.element.getAttribute("src") ,
+                path:this.getPath(),
+            }
+        }
+        getVerbose(){
+            return `[${this.verboseName}]`
+        }
+        getTextOnlyVerbose(){
+            return ""
+        }
+        static isImageMinSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
+        static getImageElement(el){
+            if(ImageElement.isThisType(el)){
+                return new ImageElement(el)
+            }
+            return null
+        }
+    }
+    class Group{
+    
+        constructor(initSegment){
+            this.rect = initSegment.rect
+            this.segments = [initSegment]
+        }
+        updateRect(segment){
+            this.rect = Rect.combineRects([this.rect, segment.rect])
+        }
+        isSoloGroup(initSegment){
+            return initSegment instanceof ISubmit
+        }
+        isGroup(segment){
+            if(
+                segment instanceof Segment &&
+                !(segment instanceof ISubmit) &&
+                segment.group == null &&
+                Rect.isWithinMargin(this.rect, segment.rect, innerGroupMargin*unit, "l,r,t,b")
+            ){
+                return true
+            }
+            return false
+        }
+        isInstruction(textElement){
+            if(
+                textElement.group == null &&
+                Rect.isWithinMargin(this.rect, textElement.rect, instructionMargin*unit, "t")
+            ){
+                return true
+            }
+            return false
+        }
+        addToGroup(segment){
+            this.segments.push(segment)
+            this.updateRect(segment)
+        }
+        getSegmentsVerbose(segments){
+            // return segments.map(segment=>segment.getVerbose())
+            return segments
+                .sort((a, b) => {
+                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
+                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
+                    if(!isYLapping){
+                        return a.rect.y - b.rect.y
+                    }
+                    return a.rect.x - b.rect.x
+                })
+                .reduce((acc, curr, index, arr) => {
+                    let text = curr.getVerbose();
+                    let divider = "";
+                    if(index>0){
+                        const lastSegment = arr[index-1]
+                        const isYLapping = Rect.areYBoundsOverlaping(lastSegment.rect, curr.rect);
+                        if(!isYLapping){
+                            divider = "\n"
+                        }else{
+                            divider = " "
+                        }
+                    }
+                    return acc + divider + text;
+                }, "");
+        }
+        getSegmentsTextOnlyVerbose(segments){
+            // return segments.map(segment=>segment.getVerbose())
+            return segments
+                .sort((a, b) => {
+                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
+                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
+                    if(!isYLapping){
+                        return a.rect.y - b.rect.y
+                    }
+                    return a.rect.x - b.rect.x
+                })
+                .reduce((acc, curr, index, arr) => {
+                    let text = curr.getTextOnlyVerbose();
+                    let divider = "";
+                    if(index>0){
+                        divider = " "
+                    }
+                    return acc + divider + text;
+                }, "");
+        }
+        getVerbose(){
+            return this.getSegmentsVerbose(this.segments)
+        }
+        getTextTypeOnlyVerbose(){
+            return this.getSegmentsTextOnlyVerbose(segments)
+        }
+        getImageElementDict(){
+            const images = this.segments.filter(segment=> segment instanceof ImageElement)
+            return images.map(image=>image.getDict())
+        }
+        getIElementsDict(){
+            const ielements = this.segments.filter(segment=> segment instanceof IElement)
+            return ielements.map(ielement=>ielement.getDict())
+        }
+        getIElementIndex(ielement){
+            const ielements = this.segments.filter(segment=> segment instanceof IElement)
+            return ielements.findIndex(iel=>iel===ielement)
+        }
+        getID(){
+            return `${parseInt(this.rect.x)}:${parseInt(this.rect.y)}`
+        }
+        getDict(){
+            return {
+                "id":this.getID(),
+                "context_path":contextPath,
+                "floor_path":floorPath,
+                "verbose":this.getVerbose(),
+                "text_only_verbose":this.getTextTypeOnlyVerbose(),
+                "image_elements":this.getImageElementDict(),
+                "ielements":this.getIElementsDict(),
+            }
+        }
+    }
+
+    class ISubmit extends IElement{
         constructor(element){
             super(element);
             this.labelName = "Submit"
@@ -469,67 +625,66 @@ function getGroup(floorInfo){
             this.color = "cyan"
             this.text = getDirectText(element) | element.getAttribute("value")
         }
+        getTextOnlyVerbose(){
+            return ""
+        }
         static isThisType(element){
             if(
                 (
                     getElementTagname(element) == "input" &&
                     element.getAttribute("type") == "submit"
                 ) ||
-                getElementTagname(element) == "button"
+                (
+                    getElementTagname(element) == "button" &&
+                    element.getAttribute("type") == "submit"
+                ) 
+                
             ) return true
             return false
         }
-        isLabel(textElement){
-            return false
-        }
-        isClustter(ielement){
-            return false
-        }
     }
-    class IRadio extends IElement{
+    class IOption extends IElement{
         constructor(element){
             super(element);
-            this.labelName = "Radio"
+            this.labelName = "Option"
             this.verboseName = "Option"
             this.color = "red"
+            this.placeHolder = getDirectText(element)
         }
         static isThisType(element){
             if(
                 (
                     getElementTagname(element) == "input" &&
-                    element.getAttribute("type") == "radio"
-                ) 
-                // if it's clickable from css or js point of view
+                    (
+                        element.getAttribute("type") == "radio" ||
+                        element.getAttribute("type") == "checkbox" 
+                    )
+                ) ||
+                IOption.isInteractable(element)
             ) return true
             return false
         }
-        isLabel(textElement){
-            if(
-                Rect.isWithinMargin(this.rect, textElement.rect, smallMargin*unit, "l,r")
-            ){
-                return true
-            }
-            return false
+        getVerbose(){
+            let text = ` ${this.placeHolder} [input:${this.verboseName} id:${this.group.getIElementIndex(this)}]`
+            return text.trim()
         }
-        isClustter(ielement){
-            if(
-                (
-                    Rect.isWithinMargin(this.rect, ielement.rect, medMargin*unit, "l,r,t,b")
-                ) &&
-                (
-                    getElementTagname(this.element) == getElementTagname(ielement.element)
-                )
-            ){
-                return true
-            }
-            return false
+        static isInteractable(el){
+            const style = window.getComputedStyle(el);
+            const tagName = getElementTagname(el);
+            return (
+                tagName != "input" &&
+                tagName != "button" &&
+                tagName != "select" &&
+                !( tagName == "a" && el.getAttribute("href") == null) &&
+                style.cursor === 'pointer'
+            )
         }
     }
-    class InputField extends IElement{
+    class IField extends IElement{
         constructor(element){
             super(element);
             this.labelName = "Field"
-            this.verboseName = "Text Field"
+            this.verboseName = "Field"
             this.placeHolder = ""
             this.value = ""
         }
@@ -537,87 +692,76 @@ function getGroup(floorInfo){
             if(
                 (
                     getElementTagname(element) == "input" &&
-                    element.getAttribute("type") == "text"
+                    (
+                        element.getAttribute("type") == "text" ||
+                        element.getAttribute("type") == "date" ||
+                        element.getAttribute("type") == "email" ||
+                        element.getAttribute("type") == "number" ||
+                        element.getAttribute("type") == "password" ||
+                        element.getAttribute("type") == "range" ||
+                        element.getAttribute("type") == "tel" ||
+                        element.getAttribute("type") == "email"
+                    )
                 ) ||
                 getElementTagname(element) == "textarea"
             ) return true
             return false
         }
-        isLabel(textElement){
-            if(
-                Rect.isWithinMargin(this.rect, textElement.rect, medMargin*unit, "l,t")
-            ){
-                return true
-            }
-            return false
-        }
-        isClustter(ielement){
-            return false
-        }
     }
-    class Cluster{
-        constructor(){
-            this.ielements = []
-            this.rect = null
+    class IDropdown extends IElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Dropdown"
+            this.verboseName = "Dropdown"
+            this.value = ""
+            this.options = this.getOptions()
         }
-        addElement(element){
-            this.ielements.push(element)
-            this.updateRect(element)
-        }
-        updateRect(element){
-            if(this.rect == null){
-                this.rect = element.getOuterRect()
-            }else{
-                this.rect = Rect.combineRects([this.rect, element.getOuterRect()])
-            }
-        }
-        getIElementsDict(){
-            return this.ielements.map(ielement=>{
-                return{
-                    "label":ielement.label,
-                    "path":ielement.getPath(),
-                }
-            })
-        }
-        getVerbose(){
-            return getAllVerbose(this.ielements).join("\n")
-        }
-    }
-    class Group{
-    
-        constructor(cluster){
-            this.instructions = []
-            this.cluster = cluster
-            this.rect = cluster.rect
-        }
-        updateRect(element){
-            this.rect = Rect.combineRects([this.rect, element.rect])
-        }
-        isInstruction(textElement){
+        static isThisType(element){
             if(
-                Rect.isWithinMargin(this.cluster.rect, textElement.rect, largeMargin*unit, "t")
-            ){
-                return true
-            }
+                (
+                    getElementTagname(element) == "select"
+                ) 
+            ) return true
             return false
         }
-        addInstruction(textElement){
-            this.instructions.push(textElement)
-            this.updateRect(textElement)
+        getOptions(){
+            return Array.from(this.element.options).map(option=>getDirectText(option))
         }
         getDict(){
-            return {
-                "context_path":contextPath,
-                "floor_path":floorPath,
-                "action_type":"uknown",
-                "verbose":this.getVerbose(),
-                "instructions": getAllVerbose(this.instructions).join("\n"),
-                "ielements":this.cluster.getIElementsDict(),
+            return{
+                type:this.verboseName,
+                path:this.getPath(),
+                options:this.options
             }
         }
         getVerbose(){
-            return getAllVerbose(this.instructions).join("\n") + "\n" + this.cluster.getVerbose()
+            let text = `[input:${this.verboseName} id:${this.group.getIElementIndex(this)}`
+            this.options.forEach(option=>{
+                text+=` Option: ${option}`
+            })
+            text+="]\n"
+            return text.trim()
         }
+        getTextOnlyVerbose(){
+            let text = ""
+            this.options.forEach(option=>{
+                text+=` ${option}`
+            })
+            return text
+        }
+    }
+
+    
+    function highlightGroups(groups){
+        groups.forEach((group,i) => {
+            if(i==0){
+                highlight(group.rect, "#09E912", `${i}`)
+            }else if(i==groups.length-1){
+                highlight(group.rect, "#fc0303", `${i}`)
+            }else{
+                highlight(group.rect, "#ace010", `${i}`)
+            }
+        });
     }
     // ====================== Floor Segments ==========================
 
@@ -639,106 +783,77 @@ function getGroup(floorInfo){
 
     // ====================== Grouping ==========================
     
-    function isRectOnFloorEdge(rect, floorRect){
-        // Calculate 10% of floorRect's dimensions
-        let leftPercentage = FLOOR_EDGE_PERC * floorRect.w;
-        let topPercentage = FLOOR_EDGE_PERC * floorRect.h;
-        let rightPercentage = floorRect.w - leftPercentage;
-        let bottomPercentage = floorRect.h - topPercentage;
-    
-        // check the rect's center if it is in 10% edge of floorRect
-        if (rect.cx > (floorRect.x + leftPercentage) && rect.cx < (floorRect.x + rightPercentage)
-            && rect.cy > (floorRect.y + topPercentage) && rect.cy < (floorRect.y + bottomPercentage)) {
-            // rect's center falls within the 10% range of each side of floorRect
+    function isRectOnEdge(rect, floorRect){
+        let leftSide = FLOOR_EDGE * unit;
+        let topSide = FLOOR_EDGE * unit;
+        let rightSide = floorRect.w - leftSide;
+
+        if (rect.x < leftSide ||
+            rect.x + rect.w > rightSide ||
+            rect.y < topSide ) {
             return true;
         } else {
-            // rect 's center does not falls within the 10% range of any side of floorRect
             return false;
         }
     }
+
     function getGroups(floor, segments){
         const floorRect = Rect.elementToRect(floor)
     
         const ielements = segments.filter(element => element instanceof IElement); 
         const textElements = segments.filter(element => element instanceof TextElement); 
     
-        // ============ labels ==============
+        // ============ lvl1 grouping ==============
+        let groups = []
         ielements.forEach(ielement => {
-            const labelIndex = textElements.findIndex(textElement=>ielement.isLabel(textElement))
-            if(labelIndex==-1)
-                return 
-                ielement.setLabel(textElements[labelIndex])
-                textElements.splice(labelIndex,1)
-        });
-        
-        // ============ clusters ==============
-        let clusters = []
-        ielements.forEach(ielement => {
-            if(!ielement.cluster){
-                const cluster = new Cluster()
-                cluster.addElement(ielement)
-                ielement.setCluster(cluster)
-                clusters.push(cluster)
-            }
-            ielements.forEach(ielement2 => {
-                if(ielement2.cluster)
+            if(ielement.group == null){
+                const group = new Group(ielement)
+                ielement.setGroup(group)
+                groups.push(group)
+                if(group.isSoloGroup(ielement))
                     return
-                if(ielement.isClustter(ielement2)){
-                    ielement.cluster.addElement(ielement2)
-                    ielement2.setCluster(ielement.cluster)
-                }
-            });
+                segments.forEach(segment => {
+                    if(segment.group != null)
+                        return
+                    if(ielement.group.isGroup(segment)){
+                        ielement.group.addToGroup(segment)
+                        segment.setGroup(ielement.group)
+                    }
+                });
+            }
         });
-    
-    
-        // console.log(clusters)
-    
-        // clusters.forEach(cluster => {
-        //     highlight(cluster.rect, "#05B8CC", "group")
-        // });
-    
-    
-        // ============ groups ==============
-        const groups = clusters.map(cluster => {
-            const group = new Group(cluster)
-            const labelIndex = textElements.findIndex(textElement=>group.isInstruction(textElement))
-            if(labelIndex==-1)
-                return group
-            group.addInstruction(textElements[labelIndex])
-            textElements.splice(labelIndex,1)
-            return group
+
+        // ============ lvl2 grouping ==============
+        groups.forEach(group => {
+            const instructionIndex = textElements.findIndex(textElement=>group.isInstruction(textElement))
+            if(instructionIndex==-1)
+                return
+            group.addToGroup(textElements[instructionIndex])
+            textElements.splice(instructionIndex,1)
         });
         
         groups.sort((a,b)=>{
-            const aOnEdge = isRectOnFloorEdge(a, floorRect);
-            const bOnEdge = isRectOnFloorEdge(b, floorRect);
+            const aOnEdge = isRectOnEdge(a.rect, screen);
+            const bOnEdge = isRectOnEdge(b.rect, screen);
             if(!aOnEdge && bOnEdge){
-                return 1
-            }
-            if(aOnEdge && !bOnEdge){
                 return -1
             }
+            if(aOnEdge && !bOnEdge){
+                return 1
+            }
             if(!aOnEdge && !bOnEdge){
-                if(a.rect.cy > b.rect.cy){
-                    return 1
-                }
-                if(a.rect.cy < b.rect.cy){
-                    return -1
-                }
-                return 0
+                return a.rect.cy - b.rect.cy
             }
             return 0
     
         })
     
-        
     
         return groups
     }
 
     // ====================== EXE ==========================
-    const IElementClasses = [InputField, SubmitElement, IRadio]
-    const FLOOR_EDGE_PERC = 0.2
+    const IElementClasses = [IField, ISubmit, IOption, IDropdown]
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
@@ -748,34 +863,34 @@ function getGroup(floorInfo){
     console.log("segments:",segments.length)
     
     // segments.forEach((segment, i)=>{
-        //     highlightElement(segment.element, segment.color, `${segment.labelName}`)
-        // })
+    //         highlightElement(segment.element, segment.color, `${segment.labelName}`)
+    //     })
         
     const groups = getGroups(floor, segments)
     
-    console.log("groups:",groups.length)
+    console.log("groups:",groups)
 
-    groups.forEach((group,i) => {
-        if(i==0){
-            highlight(group.rect, "#09E912", "group")
-        }else{
-            highlight(group.rect, "#ff0000", "group")
-        }
-    });
+    highlightGroups(groups)
     
     if(groups.length == 0)
         return null
 
-    return groups[0].getDict()
+    return groups.slice(0,3).map(group=>group.getDict())
 
 }
 
+
+
 const HIERARCHY_COEFFICIENT = 10;
 const AREA_COEFFICIENT = 10;
-const POS_COEFFICIENT = 20;
-const smallMargin = 1; 
-const medMargin = 1.5; 
-const largeMargin = 2; 
+const POS_COEFFICIENT = 10;
+
+const innerGroupMargin = 2; 
+const instructionMargin = 4; 
+const minImageSize = 10; 
+
+const FLOOR_EDGE = 2
+
 
 
 const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
@@ -786,8 +901,8 @@ const msFloorInfo = getFloorInfo()
 
 console.log("floorInfo:",msFloorInfo)
 
-const msGroup = getGroup(msFloorInfo)
+const msGroups = getTopGroups(msFloorInfo)
 
-const msResult = msGroup
+const msResult = msGroups
 
 console.log("result:",msResult)
