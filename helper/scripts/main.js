@@ -106,6 +106,11 @@ function sleep(ms) {
 }
 
 
+class ActionType{
+    field = "field"
+    select = "select"
+    dropdown = "dropdown"
+}
 class Vis{
     static isSpatial(style, rect) {
         if (!(rect.w > 0 && rect.h > 0)) { return false }
@@ -236,8 +241,8 @@ class FloorInfo{
     }
     getFloorPosScore(rect){
     
-        let xScore = FloorInfo.getDistanceRatio(rect.cx, screen.cx, screen.w);
-        // let yScore = FloorInfo.getDistanceRatio(rect.cy, screen.cy, screen.h);
+        let xScore = FloorInfo.getDistanceRatio(rect.cx, page.cx, page.w);
+        // let yScore = FloorInfo.getDistanceRatio(rect.cy, page.cy, page.h);
     
         xScore = 1-xScore
         // yScore = 1-yScore
@@ -424,7 +429,7 @@ function getTopGroups(floorInfo){
             return this.text
         }
         static getTextElement(el){
-            if(TextElement.isThisType(el)){
+            if(TextElement.isType(el)){
                 return new TextElement(el)
             }
             return null
@@ -435,6 +440,7 @@ function getTopGroups(floorInfo){
             super(element);
             this.color = "blue"
             this.text = element.getAttribute("placeholder") || getDirectText(element)
+            this.actionType = ""
         }
         getChatVerbose(){
             let text = ` [input:${this.verboseName} id:${this.group.getIElementIndex(this)}] ${this.text}`
@@ -445,12 +451,12 @@ function getTopGroups(floorInfo){
         }
         getDict(){
             return{
-                type:this.verboseName,
+                actionType:this.actionType,
                 path:this.getPath(),
             }
         }
         static getIElement(el){
-            const IElementClass = IElementClasses.find(IElementClass=>IElementClass.isThisType(el))
+            const IElementClass = IElementClasses.find(IElementClass=>IElementClass.isType(el))
             if(!IElementClass)
                 return null
             return new IElementClass(el);
@@ -515,6 +521,7 @@ function getTopGroups(floorInfo){
             this.verboseName = "Submit"
             this.color = "cyan"
             this.text = getDirectText(element) || element.getAttribute("value")
+            this.actionType = ActionType.select
         }
         static isType(element){
             if(
@@ -537,6 +544,7 @@ function getTopGroups(floorInfo){
             this.labelName = "Option"
             this.verboseName = "Option"
             this.color = "red"
+            this.actionType = ActionType.select
         }
         static isType(element){
             if(
@@ -568,7 +576,7 @@ function getTopGroups(floorInfo){
             super(element);
             this.labelName = "Field"
             this.verboseName = "Field"
-            this.text = ""
+            this.actionType = ActionType.field
         }
         static isType(element){
             if(
@@ -597,6 +605,7 @@ function getTopGroups(floorInfo){
             this.verboseName = "Dropdown"
             this.options = this.getOptions()
             this.text = this.options[0] || ""
+            this.actionType = ActionType.dropdown
         }
         static isType(element){
             if(
@@ -607,7 +616,8 @@ function getTopGroups(floorInfo){
             return false
         }
         getOptions(){
-            return Array.from(this.element.options).map(option=>getDirectText(option))
+            return Array.from(this.element.options)
+                .map(option=>getDirectText(option))
         }
         getDict(){
             return{
@@ -668,6 +678,7 @@ function getTopGroups(floorInfo){
             this.segments.push(segment)
             this.updateRect(segment)
         }
+
         getChatVerbose(){
             return segments
             .sort((a, b) => {
@@ -724,7 +735,7 @@ function getTopGroups(floorInfo){
             return this.segments.some(segment=>segment instanceof MediaElement)
         }
         getID(){
-            return `${parseInt(this.rect.x)}:${parseInt(this.rect.y)}`
+            return `${window.location.href}@@@${parseInt(this.rect.x)}@@@${parseInt(this.rect.y)}`
         }
         getDict(){
             return {
@@ -758,7 +769,7 @@ function getTopGroups(floorInfo){
         let segments = []
         Array.from(elements).forEach(element => {
 
-            if(Segment.isThisType(element)){
+            if(Segment.isType(element)){
                 let segment = Segment.getSegment(element);
                 if(segment)
                     segments.push(segment)
@@ -770,27 +781,20 @@ function getTopGroups(floorInfo){
 
     // ====================== Grouping ==========================
     
-    function isRectOnEdge(rect, floorRect){
+    function isRectOnEdge(rect){
         let leftSide = FLOOR_EDGE * unit;
         let topSide = FLOOR_EDGE * unit;
-        let rightSide = floorRect.w - leftSide;
+        let rightSide = page.w - leftSide;
 
-        if (rect.x < leftSide ||
-            rect.x + rect.w > rightSide ||
-            rect.y < topSide ) {
+        if (rect.cx < leftSide ||
+            rect.cx > rightSide ||
+            rect.cy < topSide ) {
             return true;
         } else {
             return false;
         }
     }
-
-    function getGroups(floor, segments){
-        const floorRect = Rect.elementToRect(floor)
-    
-        const ielements = segments.filter(element => element instanceof IElement); 
-        const textElements = segments.filter(element => element instanceof TextElement); 
-    
-        // ============ lvl1 grouping ==============
+    function getLvl1Grouping(ielements){
         let groups = []
         ielements.forEach(ielement => {
             if(ielement.group == null){
@@ -809,8 +813,9 @@ function getTopGroups(floorInfo){
                 });
             }
         });
-
-        // ============ lvl2 grouping ==============
+        return groups;
+    }
+    function getLvl2Grouping(groups, textElements){
         groups.forEach(group => {
             const instructionIndex = textElements.findIndex(textElement=>group.isInstruction(textElement))
             if(instructionIndex==-1)
@@ -818,10 +823,11 @@ function getTopGroups(floorInfo){
             group.addToGroup(textElements[instructionIndex])
             textElements.splice(instructionIndex,1)
         });
-        
+    }
+    function sortGroups(groups){
         groups.sort((a,b)=>{
-            const aOnEdge = isRectOnEdge(a.rect, screen);
-            const bOnEdge = isRectOnEdge(b.rect, screen);
+            const aOnEdge = isRectOnEdge(a.rect);
+            const bOnEdge = isRectOnEdge(b.rect);
             if(!aOnEdge && bOnEdge){
                 return -1
             }
@@ -832,9 +838,22 @@ function getTopGroups(floorInfo){
                 return a.rect.cy - b.rect.cy
             }
             return 0
-    
         })
+    }
+
+    function getGroups(floor, segments){
+        const ielements = segments.filter(element => element instanceof IElement); 
+        const textElements = segments.filter(element => element instanceof TextElement); 
     
+        // ============ lvl1 grouping ==============
+        let groups = []
+        groups = getLvl1Grouping(ielements)
+
+        // ============ lvl2 grouping ==============
+        getLvl2Grouping(groups, textElements)
+        
+        // ============ sort groups ==============
+        sortGroups(groups)
     
         return groups
     }
@@ -849,10 +868,6 @@ function getTopGroups(floorInfo){
 
     console.log("segments:",segments.length)
     
-    // segments.forEach((segment, i)=>{
-    //         highlightElement(segment.element, segment.color, `${segment.labelName}`)
-    //     })
-        
     const groups = getGroups(floor, segments)
     
     console.log("groups:",groups)
@@ -877,13 +892,14 @@ const instructionMargin = 4;
 const minMediaSize = 3; 
 const minImageSize = 10; 
 
-const FLOOR_EDGE = 2
+const FLOOR_EDGE = 7
 
 
 
-const screen = new Rect(window.scrollX, window.scrollY, window.screen.width,  window.screen.height)
+const page = new Rect(window.scrollX, window.scrollY, document.body.clientWidth,  document.body.clientHeight)
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
+console.log("page:", page)
 
 const msFloorInfo = getFloorInfo()
 
