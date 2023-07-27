@@ -464,10 +464,21 @@ function getTopGroups(floorInfo){
             this.color = "red"
         }
         static isType(element){
-            throw new Error('==== Abstract class ====');
-        }
-        getDict(){
-            throw new Error('==== Abstract class ====');
+            return (
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    MediaElement.isImageMinSize(element)
+                ) ||
+                (
+                    getElementTagname(element) == "video" &&
+                    MediaElement.isMinMediaSize(element)
+                )||
+                (
+                    getElementTagname(element) == "audio" &&
+                    MediaElement.isMinMediaSize(element)
+                )
+            ) 
         }
         getChatVerbose(){
             return `[${this.verboseName}]`
@@ -475,256 +486,26 @@ function getTopGroups(floorInfo){
         getSearchVerbose(){
             return ""
         }
+        static isMinMediaSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minMediaSize * unit &&
+                rect.h > minMediaSize * unit
+            )
+        }
+        static isMinImageSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
         static getMediaElement(el){
-            const MediaClass = MediaClasses.find(MediaClass=>MediaClass.isThisType(el))
-            if(!MediaClass)
-                return null
-            return new MediaClass(el);
-        }
-    }
-    class Group{
-        constructor(initSegment){
-            this.rect = initSegment.rect
-            this.segments = [initSegment]
-        }
-        updateRect(segment){
-            this.rect = Rect.combineRects([this.rect, segment.rect])
-        }
-        isSoloGroup(initSegment){
-            return initSegment instanceof ISubmit
-        }
-        isGroup(segment){
-            if(
-                segment instanceof Segment &&
-                !(segment instanceof ISubmit) &&
-                segment.group == null &&
-                Rect.isWithinMargin(this.rect, segment.rect, innerGroupMargin*unit, "l,r,t,b")
-            ){
-                return true
-            }
-            return false
-        }
-        isInstruction(textElement){
-            if(
-                textElement.group == null &&
-                Rect.isWithinMargin(this.rect, textElement.rect, instructionMargin*unit, "t")
-            ){
-                return true
-            }
-            return false
-        }
-        addToGroup(segment){
-            this.segments.push(segment)
-            this.updateRect(segment)
-        }
-        getSegmentsVerbose(segments){
-            // return segments.map(segment=>segment.getVerbose())
-            return segments
-                .sort((a, b) => {
-                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
-                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
-                    if(!isYLapping){
-                        return a.rect.y - b.rect.y
-                    }
-                    return a.rect.x - b.rect.x
-                })
-                .reduce((acc, curr, index, arr) => {
-                    let text = curr.getVerbose();
-                    let divider = "";
-                    if(index>0){
-                        const lastSegment = arr[index-1]
-                        const isYLapping = Rect.areYBoundsOverlaping(lastSegment.rect, curr.rect);
-                        if(!isYLapping){
-                            divider = "\n"
-                        }else{
-                            divider = " "
-                        }
-                    }
-                    return acc + divider + text;
-                }, "");
-        }
-        getSegmentsTextOnlyVerbose(segments){
-            // return segments.map(segment=>segment.getVerbose())
-            return segments
-                .sort((a, b) => {
-                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
-                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
-                    if(!isYLapping){
-                        return a.rect.y - b.rect.y
-                    }
-                    return a.rect.x - b.rect.x
-                })
-                .reduce((acc, curr, index, arr) => {
-                    let text = curr.getTextOnlyVerbose();
-                    let divider = "";
-                    if(index>0){
-                        divider = " "
-                    }
-                    return acc + divider + text;
-                }, "");
-        }
-        getVerbose(){
-            return this.getSegmentsVerbose(this.segments)
-        }
-        getTextTypeOnlyVerbose(){
-            return this.getSegmentsTextOnlyVerbose(segments)
-        }
-        getMediaElementDict(){
-            const medias = this.segments.filter(segment=> segment instanceof MediaElement)
-            return medias.map(media=>media.getDict())
-        }
-        getIElementsDict(){
-            const ielements = this.segments.filter(segment=> segment instanceof IElement)
-            return ielements.map(ielement=>ielement.getDict())
-        }
-        getIElementIndex(ielement){
-            const ielements = this.segments.filter(segment=> segment instanceof IElement)
-            return ielements.findIndex(iel=>iel===ielement)
-        }
-        getID(){
-            return `${parseInt(this.rect.x)}:${parseInt(this.rect.y)}`
-        }
-        getDict(){
-            return {
-                "id":this.getID(),
-                "context_path":contextPath,
-                "floor_path":floorPath,
-                "verbose":this.getVerbose(),
-                "text_only_verbose":this.getTextTypeOnlyVerbose(),
-                "media_elements":this.getMediaElementDict(),
-                "ielements":this.getIElementsDict(),
-            }
-        }
-    }
-
-    class ImageElement extends MediaElement{
-        constructor(element){
-            super(element);
-            this.labelName = "Image"
-            this.verboseName = "Image"
-            this.color = "red"
-        }
-        static isThisType(element){
-            if(
-                (
-                    getElementTagname(element) == "img" &&
-                    element.getAttribute("src") != null &&
-                    ImageElement.isImageMinSize(element)
-                ) 
-            ) return true
-            return false
-        }
-        getDict(){
-            return{
-                src:this.element.getAttribute("src") ,
-                path:this.getPath(),
-            }
-        }
-        getVerbose(){
-            return `[${this.verboseName}]`
-        }
-        getTextOnlyVerbose(){
-            return ""
-        }
-        static isImageMinSize(el){
-            const rect = Rect.elementToRect(el)
-            return (
-                rect.w > minImageSize * unit &&
-                rect.h > minImageSize * unit
-            )
-        }
-        static getImageElement(el){
-            if(ImageElement.isThisType(el)){
-                return new ImageElement(el)
-            }
+            if(MediaElement.isType(el))
+                return new MediaElement(el)
             return null
         }
-    }
-    class AudioElement extends MediaElement{
-        constructor(element){
-            super(element);
-            this.labelName = "Image"
-            this.verboseName = "Image"
-            this.color = "red"
-        }
-        static isThisType(element){
-            if(
-                (
-                    getElementTagname(element) == "img" &&
-                    element.getAttribute("src") != null &&
-                    ImageElement.isImageMinSize(element)
-                ) 
-            ) return true
-            return false
-        }
-        getDict(){
-            return{
-                src:this.element.getAttribute("src") ,
-                path:this.getPath(),
-            }
-        }
-        getVerbose(){
-            return `[${this.verboseName}]`
-        }
-        getTextOnlyVerbose(){
-            return ""
-        }
-        static isImageMinSize(el){
-            const rect = Rect.elementToRect(el)
-            return (
-                rect.w > minImageSize * unit &&
-                rect.h > minImageSize * unit
-            )
-        }
-        static getImageElement(el){
-            if(ImageElement.isThisType(el)){
-                return new ImageElement(el)
-            }
-            return null
-        }
-    }
-    class VideoElement extends MediaElement{
-        constructor(element){
-            super(element);
-            this.labelName = "Image"
-            this.verboseName = "Image"
-            this.color = "red"
-        }
-        static isThisType(element){
-            if(
-                (
-                    getElementTagname(element) == "img" &&
-                    element.getAttribute("src") != null &&
-                    ImageElement.isImageMinSize(element)
-                ) 
-            ) return true
-            return false
-        }
-        getDict(){
-            return{
-                src:this.element.getAttribute("src") ,
-                path:this.getPath(),
-            }
-        }
-        getVerbose(){
-            return `[${this.verboseName}]`
-        }
-        getTextOnlyVerbose(){
-            return ""
-        }
-        static isImageMinSize(el){
-            const rect = Rect.elementToRect(el)
-            return (
-                rect.w > minImageSize * unit &&
-                rect.h > minImageSize * unit
-            )
-        }
-        static getImageElement(el){
-            if(ImageElement.isThisType(el)){
-                return new ImageElement(el)
-            }
-            return null
-        }
+        
     }
 
     class ISubmit extends IElement{
@@ -852,7 +633,112 @@ function getTopGroups(floorInfo){
         }
     }
 
-    
+    class Group{
+        constructor(initSegment){
+            this.rect = initSegment.rect
+            this.segments = [initSegment]
+        }
+        updateRect(segment){
+            this.rect = Rect.combineRects([this.rect, segment.rect])
+        }
+        isSoloGroup(initSegment){
+            return initSegment instanceof ISubmit
+        }
+        isGroup(segment){
+            if(
+                segment instanceof Segment &&
+                !(segment instanceof ISubmit) &&
+                segment.group == null &&
+                Rect.isWithinMargin(this.rect, segment.rect, innerGroupMargin*unit, "l,r,t,b")
+            ){
+                return true
+            }
+            return false
+        }
+        isInstruction(textElement){
+            if(
+                textElement.group == null &&
+                Rect.isWithinMargin(this.rect, textElement.rect, instructionMargin*unit, "t")
+            ){
+                return true
+            }
+            return false
+        }
+        addToGroup(segment){
+            this.segments.push(segment)
+            this.updateRect(segment)
+        }
+        getChatVerbose(){
+            return segments
+            .sort((a, b) => {
+                // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
+                const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
+                if(!isYLapping){
+                    return a.rect.y - b.rect.y
+                }
+                return a.rect.x - b.rect.x
+            })
+            .reduce((acc, curr, index, arr) => {
+                let text = curr.getChatVerbose();
+                let divider = "";
+                if(index>0){
+                    const lastSegment = arr[index-1]
+                    const isYLapping = Rect.areYBoundsOverlaping(lastSegment.rect, curr.rect);
+                    if(!isYLapping){
+                        divider = "\n"
+                    }else{
+                        divider = " "
+                    }
+                }
+                return acc + divider + text;
+            }, "");
+        }
+        getSearchVerbose(){
+            return segments
+            .sort((a, b) => {
+                // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
+                const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
+                if(!isYLapping){
+                    return a.rect.y - b.rect.y
+                }
+                return a.rect.x - b.rect.x
+            })
+            .reduce((acc, curr, index, arr) => {
+                let text = curr.getSearchVerbose();
+                let divider = "";
+                if(index>0){
+                    divider = " "
+                }
+                return acc + divider + text;
+            }, "");
+        }
+        getIElementsDict(){
+            const ielements = this.segments.filter(segment=> segment instanceof IElement)
+            return ielements.map(ielement=>ielement.getDict())
+        }
+        getIElementIndex(ielement){
+            const ielements = this.segments.filter(segment=> segment instanceof IElement)
+            return ielements.findIndex(iel=>iel===ielement)
+        }
+        isMediaGroup(){
+            return this.segments.some(segment=>segment instanceof MediaElement)
+        }
+        getID(){
+            return `${parseInt(this.rect.x)}:${parseInt(this.rect.y)}`
+        }
+        getDict(){
+            return {
+                "id":this.getID(),
+                "context_path":contextPath,
+                "floor_path":floorPath,
+                "chat_verbose":this.getChatVerbose(),
+                "search_verbose":this.getSearchVerbose(),
+                "is_media_group":this.isMediaGroup(),
+                "ielements":this.getIElementsDict(),
+            }
+        }
+    }
+
     function highlightGroups(groups){
         groups.forEach((group,i) => {
             if(i==0){
@@ -955,7 +841,6 @@ function getTopGroups(floorInfo){
 
     // ====================== EXE ==========================
     const IElementClasses = [IField, ISubmit, IOption, IDropdown]
-    const MediaClasses = [ImageElement, AudioElement, VideoElement]
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
@@ -989,6 +874,7 @@ const POS_COEFFICIENT = 10;
 
 const innerGroupMargin = 2; 
 const instructionMargin = 4; 
+const minMediaSize = 3; 
 const minImageSize = 10; 
 
 const FLOOR_EDGE = 2
