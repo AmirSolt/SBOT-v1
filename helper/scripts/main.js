@@ -103,7 +103,7 @@ function sleep(ms) {
     var start = new Date().getTime(), expire = start + ms;
     while (new Date().getTime() < expire) { }
     return;
-  }
+}
 
 
 class Vis{
@@ -372,7 +372,7 @@ function getTopGroups(floorInfo){
             this.rect = Rect.elementToRect(element)
             this.group = null
         }
-        static isThisType(el){
+        static isType(el){
             const rect = Rect.elementToRect(el)
             const style = window.getComputedStyle(el);
             if(!Vis.isSpatial(style, rect))
@@ -384,10 +384,10 @@ function getTopGroups(floorInfo){
         setGroup(group){
             this.group = group
         }
-        getVerbose(){
+        getChatVerbose(){
             throw new Error('==== Abstract class ====');
         }
-        getTextOnlyVerbose(){
+        getSearchVerbose(){
             throw new Error('==== Abstract class ====');
         }
         getPath(){
@@ -398,7 +398,7 @@ function getTopGroups(floorInfo){
             if(segment == null)
                 segment = TextElement.getTextElement(el)
             if(segment == null)
-                segment = ImageElement.getImageElement(el)
+                segment = MediaElement.getMediaElement(el)
             if(segment == null || segment.rect == null)
                 return null
             return segment
@@ -412,16 +412,15 @@ function getTopGroups(floorInfo){
             this.color = "green"
             this.text = getDirectText(element)
         }
-        static isThisType(element){
-            // NOTE: if it's not obstructed by blur
+        static isType(element){
             if(getDirectText(element))
                 return true
             return false
         }
-        getVerbose(){
+        getChatVerbose(){
             return this.text
         }
-        getTextOnlyVerbose(){
+        getSearchVerbose(){
             return this.text
         }
         static getTextElement(el){
@@ -435,14 +434,14 @@ function getTopGroups(floorInfo){
         constructor(element){
             super(element);
             this.color = "blue"
-            this.placeHolder = ""
+            this.text = element.getAttribute("placeholder") || getDirectText(element)
         }
-        getVerbose(){
-            let text = ` ${this.placeHolder} [input:${this.verboseName} id:${this.group.getIElementIndex(this)}]`
+        getChatVerbose(){
+            let text = ` [input:${this.verboseName} id:${this.group.getIElementIndex(this)}] ${this.text}`
             return text.trim()
         }
-        getTextOnlyVerbose(){
-            return this.placeHolder
+        getSearchVerbose(){
+            return this.text
         }
         getDict(){
             return{
@@ -451,58 +450,39 @@ function getTopGroups(floorInfo){
             }
         }
         static getIElement(el){
-    
             const IElementClass = IElementClasses.find(IElementClass=>IElementClass.isThisType(el))
             if(!IElementClass)
                 return null
             return new IElementClass(el);
         }
     }
-    class ImageElement extends Segment{
+    class MediaElement extends Segment{
         constructor(element){
             super(element);
-            this.labelName = "Image"
-            this.verboseName = "Image"
+            this.labelName = "Media"
+            this.verboseName = "Media"
             this.color = "red"
         }
-        static isThisType(element){
-            if(
-                (
-                    getElementTagname(element) == "img" &&
-                    element.getAttribute("src") != null &&
-                    ImageElement.isImageMinSize(element)
-                ) 
-            ) return true
-            return false
+        static isType(element){
+            throw new Error('==== Abstract class ====');
         }
         getDict(){
-            return{
-                src:this.element.getAttribute("src") ,
-                path:this.getPath(),
-            }
+            throw new Error('==== Abstract class ====');
         }
-        getVerbose(){
+        getChatVerbose(){
             return `[${this.verboseName}]`
         }
-        getTextOnlyVerbose(){
+        getSearchVerbose(){
             return ""
         }
-        static isImageMinSize(el){
-            const rect = Rect.elementToRect(el)
-            return (
-                rect.w > minImageSize * unit &&
-                rect.h > minImageSize * unit
-            )
-        }
-        static getImageElement(el){
-            if(ImageElement.isThisType(el)){
-                return new ImageElement(el)
-            }
-            return null
+        static getMediaElement(el){
+            const MediaClass = MediaClasses.find(MediaClass=>MediaClass.isThisType(el))
+            if(!MediaClass)
+                return null
+            return new MediaClass(el);
         }
     }
     class Group{
-    
         constructor(initSegment){
             this.rect = initSegment.rect
             this.segments = [initSegment]
@@ -589,9 +569,9 @@ function getTopGroups(floorInfo){
         getTextTypeOnlyVerbose(){
             return this.getSegmentsTextOnlyVerbose(segments)
         }
-        getImageElementDict(){
-            const images = this.segments.filter(segment=> segment instanceof ImageElement)
-            return images.map(image=>image.getDict())
+        getMediaElementDict(){
+            const medias = this.segments.filter(segment=> segment instanceof MediaElement)
+            return medias.map(media=>media.getDict())
         }
         getIElementsDict(){
             const ielements = this.segments.filter(segment=> segment instanceof IElement)
@@ -611,9 +591,139 @@ function getTopGroups(floorInfo){
                 "floor_path":floorPath,
                 "verbose":this.getVerbose(),
                 "text_only_verbose":this.getTextTypeOnlyVerbose(),
-                "image_elements":this.getImageElementDict(),
+                "media_elements":this.getMediaElementDict(),
                 "ielements":this.getIElementsDict(),
             }
+        }
+    }
+
+    class ImageElement extends MediaElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Image"
+            this.verboseName = "Image"
+            this.color = "red"
+        }
+        static isThisType(element){
+            if(
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    ImageElement.isImageMinSize(element)
+                ) 
+            ) return true
+            return false
+        }
+        getDict(){
+            return{
+                src:this.element.getAttribute("src") ,
+                path:this.getPath(),
+            }
+        }
+        getVerbose(){
+            return `[${this.verboseName}]`
+        }
+        getTextOnlyVerbose(){
+            return ""
+        }
+        static isImageMinSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
+        static getImageElement(el){
+            if(ImageElement.isThisType(el)){
+                return new ImageElement(el)
+            }
+            return null
+        }
+    }
+    class AudioElement extends MediaElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Image"
+            this.verboseName = "Image"
+            this.color = "red"
+        }
+        static isThisType(element){
+            if(
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    ImageElement.isImageMinSize(element)
+                ) 
+            ) return true
+            return false
+        }
+        getDict(){
+            return{
+                src:this.element.getAttribute("src") ,
+                path:this.getPath(),
+            }
+        }
+        getVerbose(){
+            return `[${this.verboseName}]`
+        }
+        getTextOnlyVerbose(){
+            return ""
+        }
+        static isImageMinSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
+        static getImageElement(el){
+            if(ImageElement.isThisType(el)){
+                return new ImageElement(el)
+            }
+            return null
+        }
+    }
+    class VideoElement extends MediaElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Image"
+            this.verboseName = "Image"
+            this.color = "red"
+        }
+        static isThisType(element){
+            if(
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    ImageElement.isImageMinSize(element)
+                ) 
+            ) return true
+            return false
+        }
+        getDict(){
+            return{
+                src:this.element.getAttribute("src") ,
+                path:this.getPath(),
+            }
+        }
+        getVerbose(){
+            return `[${this.verboseName}]`
+        }
+        getTextOnlyVerbose(){
+            return ""
+        }
+        static isImageMinSize(el){
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
+        static getImageElement(el){
+            if(ImageElement.isThisType(el)){
+                return new ImageElement(el)
+            }
+            return null
         }
     }
 
@@ -623,12 +733,9 @@ function getTopGroups(floorInfo){
             this.labelName = "Submit"
             this.verboseName = "Submit"
             this.color = "cyan"
-            this.text = getDirectText(element) | element.getAttribute("value")
+            this.text = getDirectText(element) || element.getAttribute("value")
         }
-        getTextOnlyVerbose(){
-            return ""
-        }
-        static isThisType(element){
+        static isType(element){
             if(
                 (
                     getElementTagname(element) == "input" &&
@@ -649,9 +756,8 @@ function getTopGroups(floorInfo){
             this.labelName = "Option"
             this.verboseName = "Option"
             this.color = "red"
-            this.placeHolder = getDirectText(element)
         }
-        static isThisType(element){
+        static isType(element){
             if(
                 (
                     getElementTagname(element) == "input" &&
@@ -663,10 +769,6 @@ function getTopGroups(floorInfo){
                 IOption.isInteractable(element)
             ) return true
             return false
-        }
-        getVerbose(){
-            let text = ` ${this.placeHolder} [input:${this.verboseName} id:${this.group.getIElementIndex(this)}]`
-            return text.trim()
         }
         static isInteractable(el){
             const style = window.getComputedStyle(el);
@@ -685,10 +787,9 @@ function getTopGroups(floorInfo){
             super(element);
             this.labelName = "Field"
             this.verboseName = "Field"
-            this.placeHolder = ""
-            this.value = ""
+            this.text = ""
         }
-        static isThisType(element){
+        static isType(element){
             if(
                 (
                     getElementTagname(element) == "input" &&
@@ -713,10 +814,10 @@ function getTopGroups(floorInfo){
             super(element);
             this.labelName = "Dropdown"
             this.verboseName = "Dropdown"
-            this.value = ""
             this.options = this.getOptions()
+            this.text = this.options[0] || ""
         }
-        static isThisType(element){
+        static isType(element){
             if(
                 (
                     getElementTagname(element) == "select"
@@ -734,7 +835,7 @@ function getTopGroups(floorInfo){
                 options:this.options
             }
         }
-        getVerbose(){
+        getChatVerbose(){
             let text = `[input:${this.verboseName} id:${this.group.getIElementIndex(this)}`
             this.options.forEach(option=>{
                 text+=` Option: ${option}`
@@ -742,7 +843,7 @@ function getTopGroups(floorInfo){
             text+="]\n"
             return text.trim()
         }
-        getTextOnlyVerbose(){
+        getSearchVerbose(){
             let text = ""
             this.options.forEach(option=>{
                 text+=` ${option}`
@@ -854,6 +955,7 @@ function getTopGroups(floorInfo){
 
     // ====================== EXE ==========================
     const IElementClasses = [IField, ISubmit, IOption, IDropdown]
+    const MediaClasses = [ImageElement, AudioElement, VideoElement]
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
@@ -906,3 +1008,6 @@ const msGroups = getTopGroups(msFloorInfo)
 const msResult = msGroups
 
 console.log("result:",msResult)
+
+
+
