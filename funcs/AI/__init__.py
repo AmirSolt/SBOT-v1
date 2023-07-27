@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import os
 import openai
+from d_types import ParsedAnswer
 from InstructorEmbedding import INSTRUCTOR
 from dotenv import load_dotenv
 load_dotenv()
@@ -71,12 +72,13 @@ def recommendations_from_embeddings(
 
 
 
-
-def answer_parsed_group(group_verbose, context):
+def answer_parsed_group(group_verbose, context)->ParsedAnswer|None:
     messages = get_chat_messages(group_verbose, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
-    answer = chat_completion.choices[0].message.content    
-    return answer
+    answer = chat_completion.choices[0].message.content  
+    if not answer:
+        return None
+    return ParsedAnswer(answer)  
 
 def get_chat_messages(group_verbose, context):
     messages = []

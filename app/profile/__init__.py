@@ -72,8 +72,11 @@ class Profile:
             
     #     return "\n".join(context)
         
-    def get_context(self, text:str)->str:
-        return "\n".join(self.get_all_contexts(text)[:COUNT_RETURNED_MEMORY])
+    def get_context(self, text:str)->str|None:
+        contexts = self.get_all_contexts(text)[:COUNT_RETURNED_MEMORY]
+        if len(contexts) == 0:
+            return None
+        return "\n".join(contexts)
         
     def get_all_contexts(self, text:str)->list[str]:
         """

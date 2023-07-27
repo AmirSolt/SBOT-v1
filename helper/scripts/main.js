@@ -877,7 +877,7 @@ function getTopGroups(floorInfo){
     if(groups.length == 0)
         return null
 
-    return groups.slice(0,3).map(group=>group.getDict())
+    return groups.slice(0,100).map(group=>group.getDict())
 
 }
 

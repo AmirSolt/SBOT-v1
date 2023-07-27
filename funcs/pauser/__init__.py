@@ -31,6 +31,6 @@ def test_pause():
 
     pause_duration = 2
 
-    print(f"waiting for {pause_duration}s")
+    print(f"TEST PAUSE waiting for {pause_duration}s")
 
     time.sleep(pause_duration)
