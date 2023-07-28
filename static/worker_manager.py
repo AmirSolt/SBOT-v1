@@ -1,5 +1,11 @@
 
 
+
+class WorkerManager:
+    pass
+
+
+
 class WorkerInfo:
     
     def __init__(self, id, name) -> None:
@@ -18,7 +24,7 @@ def get_worker_infos():
     
     
 def get_worker_0():
-    w = WorkerInfo("rami_huston", "rami huston")
+    w = WorkerInfo("rami huston", "rami huston")
     w.add_to_memory("email", "ram4hus@caspear.com")
     w.add_to_memory("password", "48f&S2cnl1x2")
     w.add_to_memory("first name", "rami")

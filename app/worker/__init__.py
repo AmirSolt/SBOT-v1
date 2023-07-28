@@ -6,7 +6,7 @@ from ..profile import Profile
 from helper import utils, config
 from funcs import pauser, vacuum, AI, actor
 
-from static.worker_generator import WorkerInfo
+from static.worker_manager import WorkerInfo
 
 
 class Worker:
@@ -61,7 +61,7 @@ class Worker:
         
         # if AI response needed?
         context = self.profile.get_context(parsed_group["search_verbose"])
-        parsed_answer = AI.answer_parsed_group(parsed_group["chat_verbose"], self.worker_info, context)
+        parsed_answer = AI.answer_parsed_group(parsed_group["chat_verbose"], self.worker_id, context)
         # find answer
         
         # >>> state if answer was not valid

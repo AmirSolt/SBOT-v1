@@ -4,7 +4,7 @@ from sklearn.neighbors import NearestNeighbors
 from helper import config
 import os
 import openai
-from static.worker_generator import WorkerInfo
+from static.worker_manager import WorkerInfo
 from d_types import ParsedAnswer
 from InstructorEmbedding import INSTRUCTOR
 from dotenv import load_dotenv
@@ -86,19 +86,19 @@ def recommendations_from_embeddings(
 
 
 
-def answer_parsed_group(group_verbose, worker_info:WorkerInfo, context)->ParsedAnswer|None:
-    messages = get_chat_messages(group_verbose, worker_info, context)
+def answer_parsed_group(group_verbose, worker_name:str, context)->ParsedAnswer|None:
+    messages = get_chat_messages(group_verbose, worker_name, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, temperature=config.CHAT_TEMPERATURE)
     answer = chat_completion.choices[0].message.content  
     if not answer:
         return None
     return ParsedAnswer(answer)  
 
-def get_chat_messages(group_verbose, worker_info:WorkerInfo, context):
+def get_chat_messages(group_verbose, worker_name:str, context):
     messages = []
     
     context = "" if not context else context
-    system_message = CHAT_INSTRUCTIONS.format(name=worker_info.name, context=context)
+    system_message = CHAT_INSTRUCTIONS.format(name=worker_name, context=context)
     
     messages.append(
     {"role": "system", "content": system_message}

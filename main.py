@@ -1,5 +1,5 @@
 from app.worker import Worker
-from static.worker_generator import get_worker_infos
+from static.worker_manager import get_worker_infos
 
 if __name__ == '__main__':
 

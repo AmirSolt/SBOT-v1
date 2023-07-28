@@ -1,6 +1,6 @@
 from helper import utils, config
 from funcs import AI
-from static.worker_generator import WorkerInfo
+from static.worker_manager import WorkerInfo
 
 
 
@@ -44,9 +44,6 @@ class Profile:
             
         
 
-   
-        
-        
     def __init_filesys(self):
 
         utils.create_dir_if_not_exist(self.profile_dir)
@@ -64,7 +61,7 @@ class Profile:
                 raise Exception(f"======= Profile info does not exist path: {self.profile_info_path}")
             
         
-        
+
     # def get_parsed_group_context(self, parsed_group)->str:
     #     context = []
         
@@ -95,7 +92,8 @@ class Profile:
         
         return [f"{item['question']} {item['answer']}" for item in memory_items]
         
-        
+
+    
     def __memory_lookup(self, memory:list[dict], target_embedding:list[float])->list[dict]:
         """
         returns memory items close to target_embedding
@@ -123,8 +121,8 @@ class Profile:
 
     def __load_perm_memory(self):
         profile_info = utils.read_file(self.profile_info_path)
-        for info in profile_info:
-            self.__add_to_perm_memory(info["question"], info["answer"])
+        for key, value in profile_info.items():
+            self.__add_to_perm_memory(key, value)
         
     
     def __add_to_perm_memory(self, question:str, answer:str):
