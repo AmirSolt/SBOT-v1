@@ -61,7 +61,7 @@ class Profile:
                 self.__load_perm_memory()
                 utils.write_file(self.perm_memory_path, self.perm_memory)
             else:
-                raise Exception(f"======= Profile info does not exist {}
+                raise Exception(f"======= Profile info does not exist path: {self.profile_info_path}")
             
         
         
@@ -122,8 +122,9 @@ class Profile:
         
 
     def __load_perm_memory(self):
-        # self.__add_to_perm_memory(key, value)
-        pass
+        profile_info = utils.read_file(self.profile_info_path)
+        for info in profile_info:
+            self.__add_to_perm_memory(info["question"], info["answer"])
         
     
     def __add_to_perm_memory(self, question:str, answer:str):
