@@ -90,6 +90,18 @@ function getUniqueCssPath(el) {
 function getElementTagname(el){
     return el.tagName.toLowerCase();
 }
+function sleep(ms) {
+    var start = new Date().getTime(), expire = start + ms;
+    while (new Date().getTime() < expire) { }
+    return;
+}
+function cleanText(text) {
+    return text.replace(/\s+/g, ' ').trim();
+}
+function getAllText(element) {
+    const text = element.textContent || element.innerText || '';
+    return cleanText(text)
+}
 function getDirectText(el) {
     let directText = '';
     for (let i = 0; i < el.childNodes.length; i++) {
@@ -97,12 +109,7 @@ function getDirectText(el) {
             directText += el.childNodes[i].nodeValue;
         }
     }
-    return directText.trim()
-}
-function sleep(ms) {
-    var start = new Date().getTime(), expire = start + ms;
-    while (new Date().getTime() < expire) { }
-    return;
+    return cleanText(directText)
 }
 
 
@@ -439,7 +446,7 @@ function getTopGroups(floorInfo){
         constructor(element){
             super(element);
             this.color = "blue"
-            this.text = element.getAttribute("placeholder") || getDirectText(element)
+            this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
             this.actionType = ""
         }
         getChatVerbose(){
@@ -538,12 +545,13 @@ function getTopGroups(floorInfo){
             return false
         }
     }
-    class IRadio extends IElement{
+    class ISelect extends IElement{
         constructor(element){
             super(element);
-            this.labelName = "Radio"
-            this.verboseName = "Radio"
+            this.labelName = "Select"
+            this.verboseName = "Select"
             this.color = "red"
+            this.text = getAllText(element) || getDirectText(element) || ""
             this.actionType = ActionType.select
         }
         static isType(element){
@@ -555,7 +563,7 @@ function getTopGroups(floorInfo){
                         element.getAttribute("type") == "checkbox" 
                     )
                 ) ||
-                IRadio.isInteractable(element)
+                ISelect.isInteractable(element)
             ) return true
             return false
         }
@@ -680,7 +688,7 @@ function getTopGroups(floorInfo){
         }
 
         getChatVerbose(){
-            return segments
+            return this.segments
             .sort((a, b) => {
                 // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
                 const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
@@ -702,10 +710,11 @@ function getTopGroups(floorInfo){
                     }
                 }
                 return acc + divider + text;
-            }, "");
+            }, "")
+            .trim()
         }
         getSearchVerbose(){
-            return segments
+            return this.segments
             .sort((a, b) => {
                 // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
                 const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
@@ -721,7 +730,8 @@ function getTopGroups(floorInfo){
                     divider = " "
                 }
                 return acc + divider + text;
-            }, "");
+            }, "")
+            .trim()
         }
         getIElementsDict(){
             const ielements = this.segments.filter(segment=> segment instanceof IElement)
@@ -735,7 +745,7 @@ function getTopGroups(floorInfo){
             return this.segments.some(segment=>segment instanceof MediaElement)
         }
         getID(){
-            return `${window.location.href}@@@${parseInt(this.rect.x)}@@@${parseInt(this.rect.y)}`
+            return `@@@${this.segments.length}@@@${parseInt(this.rect.x)}@@@${parseInt(this.rect.y)}@@@${parseInt(this.rect.w)}@@@${parseInt(this.rect.h)}`
         }
         getDict(){
             return {
@@ -781,6 +791,33 @@ function getTopGroups(floorInfo){
 
     // ====================== Grouping ==========================
     
+    function cleanISelects(segments){
+        return segments.filter((segment, i) => {
+            let isValid = true
+            if(!(segment instanceof ISelect))
+                return isValid
+
+            segments.forEach((segment2, j)=>{
+                if(!(segment2 instanceof ISelect))
+                    return 
+                if(!isValid)
+                    return
+                if(j !== i) {
+                    if(
+                        Rect.areXBoundsOverlaping(segment.rect, segment2.rect) &&
+                        Rect.areYBoundsOverlaping(segment.rect, segment2.rect)){
+                        if(
+                            // segment.text.length < segment2.text.length
+                            segment.rect.area < segment2.rect.area
+                            ){
+                            isValid = false
+                        }
+                    }
+                }
+            })
+            return isValid
+        })
+    }
     function isRectOnEdge(rect){
         let leftSide = FLOOR_EDGE * unit;
         let topSide = FLOOR_EDGE * unit;
@@ -794,7 +831,7 @@ function getTopGroups(floorInfo){
             return false;
         }
     }
-    function getLvl1Grouping(ielements){
+    function getLvl1Grouping(ielements, segments){
         let groups = []
         ielements.forEach(ielement => {
             if(ielement.group == null){
@@ -841,13 +878,14 @@ function getTopGroups(floorInfo){
         })
     }
 
+
     function getGroups(floor, segments){
         const ielements = segments.filter(element => element instanceof IElement); 
         const textElements = segments.filter(element => element instanceof TextElement); 
     
         // ============ lvl1 grouping ==============
         let groups = []
-        groups = getLvl1Grouping(ielements)
+        groups = getLvl1Grouping(ielements, segments)
 
         // ============ lvl2 grouping ==============
         getLvl2Grouping(groups, textElements)
@@ -859,25 +897,27 @@ function getTopGroups(floorInfo){
     }
 
     // ====================== EXE ==========================
-    const IElementClasses = [IField, ISubmit, IRadio, IDropdown]
+    const IElementClasses = [IField, ISubmit, ISelect, IDropdown]
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
     
-    const segments = getSegments(floor)
+    let gSegments = getSegments(floor)
 
-    console.log("segments:",segments.length)
-    
-    const groups = getGroups(floor, segments)
-    
-    console.log("groups:",groups)
+    gSegments = cleanISelects(gSegments)
 
-    highlightGroups(groups)
+    console.log("segments:",gSegments)
     
-    if(groups.length == 0)
+    const gGroups = getGroups(floor, gSegments)
+    
+    console.log("groups:",gGroups)
+
+    highlightGroups(gGroups)
+    
+    if(gGroups.length == 0)
         return null
 
-    return groups.slice(0,100).map(group=>group.getDict())
+    return gGroups.slice(0,100).map(group=>group.getDict())
 
 }
 

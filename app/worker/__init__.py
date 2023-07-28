@@ -31,12 +31,12 @@ class Worker:
         if not parsed_groups:
             return None
         
-        clean_groups = [group for group in parsed_groups if group["id"] not in self.last_group_ids][0]
+        clean_groups = [group for group in parsed_groups if group["id"] not in self.last_group_ids]
         if not clean_groups:
             return None
-        
+        r = clean_groups[0]
         self.last_group_ids = self.last_group_ids[-self.ID_RETENTION_COUNT:]
-        self.last_group_ids.append(clean_groups[0]["id"])
+        self.last_group_ids.append(r["id"])
         return r
         
     
