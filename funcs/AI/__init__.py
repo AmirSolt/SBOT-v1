@@ -1,9 +1,10 @@
 
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+from helper import config
 import os
 import openai
-from static.worker_infos import WorkerInfo
+from static.worker_generator import WorkerInfo
 from d_types import ParsedAnswer
 from InstructorEmbedding import INSTRUCTOR
 from dotenv import load_dotenv
@@ -87,7 +88,7 @@ def recommendations_from_embeddings(
 
 def answer_parsed_group(group_verbose, worker_info:WorkerInfo, context)->ParsedAnswer|None:
     messages = get_chat_messages(group_verbose, worker_info, context)
-    chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
+    chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, temperature=config.CHAT_TEMPERATURE)
     answer = chat_completion.choices[0].message.content  
     if not answer:
         return None

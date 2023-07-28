@@ -6,7 +6,7 @@ from ..profile import Profile
 from helper import utils, config
 from funcs import pauser, vacuum, AI, actor
 
-from static.worker_infos import WorkerInfo
+from static.worker_generator import WorkerInfo
 
 
 class Worker:
@@ -14,16 +14,15 @@ class Worker:
     ID_RETENTION_COUNT = 40
     
 
-    def __init__(self, worker_info:WorkerInfo) -> None:
+    def __init__(self, worker_id:str) -> None:
         
-        self.worker_info = worker_info
-        self.worker_id = worker_info.id
+        self.worker_id = worker_id
         self.worker_dir = config.WORKER_DIR.format(worker_id=self.worker_id)
         utils.create_dir_if_not_exist(self.worker_dir)
         
         
         self.browser = Browser(self.worker_id, headless=False, use_subprocess=True)
-        self.profile = Profile(self.worker_id, worker_info)
+        self.profile = Profile(self.worker_id)
 
         self.last_group_ids = []
     

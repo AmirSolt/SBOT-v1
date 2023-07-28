@@ -29,6 +29,7 @@ class Browser(uc.Chrome):
     def __init__(self, worker_id:str, options=None, user_data_dir=None, driver_executable_path=None, browser_executable_path=None, port=0, enable_cdp_events=False, desired_capabilities=None, advanced_elements=False, keep_alive=True, log_level=0, headless=False, version_main=None, patcher_force_close=False, suppress_welcome=True, use_subprocess=True, debug=False, no_sandbox=True, user_multi_procs: bool = False, **kw):
 
         self.browser_dir = config.BROWSER_DIR.format(worker_id=worker_id)
+        self.browser_logs_dir = config.BROWSER_LOGS.format(worker_id=worker_id)
         self.screenshots_dir = config.BROWSER_SCREENSHOTS_DIR.format(worker_id=worker_id)
         self.pages_dir = config.BROWSER_PAGES_DIR.format(worker_id=worker_id)
         self.parsed_html_dir = config.BROWSER_PARSED_HTML_DIR.format(worker_id=worker_id)
@@ -53,6 +54,7 @@ class Browser(uc.Chrome):
     def __init_filesys(self):
 
         utils.create_dir_if_not_exist(self.browser_dir)
+        utils.create_dir_if_not_exist(self.browser_logs_dir)
                 
         if utils.does_file_exist(self.cookies_path):
             self.__load_cookies()

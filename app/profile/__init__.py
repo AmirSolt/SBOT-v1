@@ -1,6 +1,6 @@
 from helper import utils, config
 from funcs import AI
-from static.worker_infos import WorkerInfo
+from static.worker_generator import WorkerInfo
 
 
 
@@ -21,14 +21,14 @@ class Profile:
     
     
     
-    def __init__(self, worker_id:str, worker_info:WorkerInfo) -> None:
+    def __init__(self, worker_id:str) -> None:
         
-        self.worker_info = worker_info
         
         self.perm_memory:list[dict] = []
         self.survey_memory:list[dict] = []
         
         self.profile_dir = config.PROFILE_DIR.format(worker_id=worker_id)
+        self.profile_info_path = config.PROFILE_INFO_FILE.format(worker_id=worker_id)
         self.perm_memory_path = config.PROFILE_PERM_MEM_FILE.format(worker_id=worker_id)
         self.survey_memory_path = config.PROFILE_SURVEY_MEM_FILE.format(worker_id=worker_id)
         
@@ -57,8 +57,12 @@ class Profile:
             self.survey_memory = utils.read_file(self.survey_memory_path)
         
         if not self.perm_memory:
-            self.__generate_perm_memory()
-            utils.write_file(self.perm_memory_path, self.perm_memory)
+            if utils.does_file_exist(self.profile_info_path):
+                self.__load_perm_memory()
+                utils.write_file(self.perm_memory_path, self.perm_memory)
+            else:
+                raise Exception(f"======= Profile info does not exist {}
+            
         
         
     # def get_parsed_group_context(self, parsed_group)->str:
@@ -117,10 +121,9 @@ class Profile:
         self.survey_memory = {}
         
 
-    def __generate_perm_memory(self):
-        for key, value in self.worker_info.memory.items():
-            self.__add_to_perm_memory(key, value)
-   
+    def __load_perm_memory(self):
+        # self.__add_to_perm_memory(key, value)
+        pass
         
     
     def __add_to_perm_memory(self, question:str, answer:str):

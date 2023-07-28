@@ -1,5 +1,5 @@
 from app.worker import Worker
-from static.worker_infos import get_worker_infos
+from static.worker_generator import get_worker_infos
 
 if __name__ == '__main__':
 
@@ -7,7 +7,7 @@ if __name__ == '__main__':
     # parralell
     for worker_info in [get_worker_infos()[0]]:
         
-        worker = Worker(worker_info)
+        worker = Worker(worker_info.id)
         try:
             for i in range(1_000_000):
                 
