@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 import os
 import openai
+from static.worker_infos import WorkerInfo
 from d_types import ParsedAnswer
 from InstructorEmbedding import INSTRUCTOR
 from dotenv import load_dotenv
@@ -12,7 +13,19 @@ load_dotenv()
 # import torch
 
 
-CHAT_INSTRUCTIONS = "only answer the question. choose one or multiple options or answer in full if it's an input field."
+CHAT_INSTRUCTIONS = """Role play as {name}. You are given a survey question and are required to answer it.  To answer the question pay attention to [input:... id:...]. Answer one or many inputs if needed. You can only respond in the following formats for each input. 
+If [input: Field id:x] respond like so:
+id:x answer:...
+If [input: Radio id:x] respond like so:
+id:x
+If [input: Submit id:x] respond like so:
+id:x
+If [input: Dropdown id:x] respond like so:
+id:x option:...
+
+some information about {name}:
+{context}
+"""
 
 
 print("... loading models")
@@ -62,7 +75,7 @@ def recommendations_from_embeddings(
 
    distances, indices_of_nearest_neighbors = knn.kneighbors(query_embedding, return_distance=True)
    
-   print(f"Similarity scores: {distances}")
+#    print(f"Similarity scores: {distances}")
    
    filtered_indices = indices_of_nearest_neighbors[0][ (1-distances[0]) > distance_threshold]
    
@@ -72,19 +85,19 @@ def recommendations_from_embeddings(
 
 
 
-def answer_parsed_group(group_verbose, context)->ParsedAnswer|None:
-    messages = get_chat_messages(group_verbose, context)
+def answer_parsed_group(group_verbose, worker_info:WorkerInfo, context)->ParsedAnswer|None:
+    messages = get_chat_messages(group_verbose, worker_info, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
     answer = chat_completion.choices[0].message.content  
     if not answer:
         return None
     return ParsedAnswer(answer)  
 
-def get_chat_messages(group_verbose, context):
+def get_chat_messages(group_verbose, worker_info:WorkerInfo, context):
     messages = []
     
-    system_message = CHAT_INSTRUCTIONS 
-    system_message += "" if not context else f" context: {context}"
+    context = "" if not context else context
+    system_message = CHAT_INSTRUCTIONS.format(name=worker_info.name, context=context)
     
     messages.append(
     {"role": "system", "content": system_message}

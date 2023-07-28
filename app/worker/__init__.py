@@ -16,6 +16,7 @@ class Worker:
 
     def __init__(self, worker_info:WorkerInfo) -> None:
         
+        self.worker_info = worker_info
         self.worker_id = worker_info.id
         self.worker_dir = config.WORKER_DIR.format(worker_id=self.worker_id)
         utils.create_dir_if_not_exist(self.worker_dir)
@@ -26,12 +27,16 @@ class Worker:
 
         self.last_group_ids = []
     
-    def __update_parsed_group(self, parsed_groups):
-        if len(parsed_groups) == 0:
+    def __update_parsed_group(self, parsed_groups)->dict|None:
+        if not parsed_groups:
             return None
         
-        r = [group for group in parsed_groups if group["id"] not in self.last_group_ids][0]
-        self.last_group_ids = self.last_group_ids[:self.ID_RETENTION_COUNT].append(r["id"])
+        clean_groups = [group for group in parsed_groups if group["id"] not in self.last_group_ids][0]
+        if not clean_groups:
+            return None
+        
+        self.last_group_ids = self.last_group_ids[-self.ID_RETENTION_COUNT:]
+        self.last_group_ids.append(clean_groups[0]["id"])
         return r
         
     
@@ -49,11 +54,15 @@ class Worker:
         parsed_groups = self.browser.get_parsed_groups()
         parsed_group = self.__update_parsed_group(parsed_groups)
         
+        if not parsed_group:
+            print("======= No parsed group ======")
+            return
+        
         # >>> state if parsed response is None or has only one Ielement or has Media
         
         # if AI response needed?
         context = self.profile.get_context(parsed_group["search_verbose"])
-        answer = AI.answer_parsed_group(parsed_group["chat_verbose"], context)
+        parsed_answer = AI.answer_parsed_group(parsed_group["chat_verbose"], self.worker_info, context)
         # find answer
         
         # >>> state if answer was not valid
@@ -63,7 +72,7 @@ class Worker:
         print("=============")
         print("verbose:\n",parsed_group["chat_verbose"])
         print("=============")
-        print("answer:\n",answer)
+        print("answer:\n",parsed_answer.raw_answer)
         print("=============")
         
 

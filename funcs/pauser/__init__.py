@@ -29,7 +29,7 @@ def pause():
 
 def test_pause():
 
-    pause_duration = 2
+    pause_duration = 0.2
 
     print(f"TEST PAUSE waiting for {pause_duration}s")
 

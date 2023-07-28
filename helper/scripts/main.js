@@ -474,7 +474,7 @@ function getTopGroups(floorInfo){
                 (
                     getElementTagname(element) == "img" &&
                     element.getAttribute("src") != null &&
-                    MediaElement.isImageMinSize(element)
+                    MediaElement.isMinImageSize(element)
                 ) ||
                 (
                     getElementTagname(element) == "video" &&
@@ -538,11 +538,11 @@ function getTopGroups(floorInfo){
             return false
         }
     }
-    class IOption extends IElement{
+    class IRadio extends IElement{
         constructor(element){
             super(element);
-            this.labelName = "Option"
-            this.verboseName = "Option"
+            this.labelName = "Radio"
+            this.verboseName = "Radio"
             this.color = "red"
             this.actionType = ActionType.select
         }
@@ -555,7 +555,7 @@ function getTopGroups(floorInfo){
                         element.getAttribute("type") == "checkbox" 
                     )
                 ) ||
-                IOption.isInteractable(element)
+                IRadio.isInteractable(element)
             ) return true
             return false
         }
@@ -859,7 +859,7 @@ function getTopGroups(floorInfo){
     }
 
     // ====================== EXE ==========================
-    const IElementClasses = [IField, ISubmit, IOption, IDropdown]
+    const IElementClasses = [IField, ISubmit, IRadio, IDropdown]
     const contextPath = floorInfo.contextPath;
     const floorPath = floorInfo.floorPath;
     const floor = floorInfo.element
