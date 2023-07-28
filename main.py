@@ -1,15 +1,15 @@
 from app.worker import Worker
-from static.profile_manager import get_worker_infos
+from static.profile_manager import ProfileManager
 
 if __name__ == '__main__':
 
-
+    profile_manager = ProfileManager()
     # parralell
-    for worker_info in [get_worker_infos()[0]]:
+    for profile_seed in profile_manager.get_oldest_active():
         
-        worker = Worker(worker_info.id)
+        worker = Worker(profile_seed.id)
         try:
-            for i in range(1_000_000):
+            while True:
                 
                 input(">>> next tick:")
                 
