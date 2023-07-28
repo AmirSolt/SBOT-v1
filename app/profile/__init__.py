@@ -1,6 +1,5 @@
 from helper import utils, config
 from funcs import AI
-from static.worker_manager import WorkerInfo
 
 
 
@@ -28,6 +27,7 @@ class Profile:
         self.survey_memory:list[dict] = []
         
         self.profile_dir = config.PROFILE_DIR.format(worker_id=worker_id)
+        self.profile_memory_dir = config.PROFILE_MEMORY_DIR.format(worker_id=worker_id)
         self.profile_info_path = config.PROFILE_INFO_FILE.format(worker_id=worker_id)
         self.perm_memory_path = config.PROFILE_PERM_MEM_FILE.format(worker_id=worker_id)
         self.survey_memory_path = config.PROFILE_SURVEY_MEM_FILE.format(worker_id=worker_id)
@@ -47,6 +47,7 @@ class Profile:
     def __init_filesys(self):
 
         utils.create_dir_if_not_exist(self.profile_dir)
+        utils.create_dir_if_not_exist(self.profile_memory_dir)
                 
         if utils.does_file_exist(self.perm_memory_path): 
             self.perm_memory = utils.read_file(self.perm_memory_path)

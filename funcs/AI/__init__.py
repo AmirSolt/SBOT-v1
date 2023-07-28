@@ -4,7 +4,6 @@ from sklearn.neighbors import NearestNeighbors
 from helper import config
 import os
 import openai
-from static.worker_manager import WorkerInfo
 from d_types import ParsedAnswer
 from InstructorEmbedding import INSTRUCTOR
 from dotenv import load_dotenv

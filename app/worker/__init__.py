@@ -6,7 +6,6 @@ from ..profile import Profile
 from helper import utils, config
 from funcs import pauser, vacuum, AI, actor
 
-from static.worker_manager import WorkerInfo
 
 
 class Worker:
