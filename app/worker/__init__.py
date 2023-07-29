@@ -2,7 +2,7 @@
 from ..browser import Browser
 from ..profile import Profile
 
-
+from static.profile_manager import ProfileSeed
 from helper import utils, config
 from funcs import pauser, vacuum, AI, actor
 
@@ -13,9 +13,12 @@ class Worker:
     ID_RETENTION_COUNT = 40
     
 
-    def __init__(self, worker_id:str) -> None:
+    def __init__(self, profile_seed:ProfileSeed) -> None:
         
-        self.worker_id = worker_id
+        self.profile_seed= profile_seed
+        self.profile_seed.activate()
+        
+        self.worker_id = profile_seed.id
         self.worker_dir = config.WORKER_DIR.format(worker_id=self.worker_id)
         utils.create_dir_if_not_exist(self.worker_dir)
         
@@ -39,7 +42,6 @@ class Worker:
         
     
     def tick(self)->None:
-        
         
         
         print("========== tick starts ==========")
@@ -78,4 +80,5 @@ class Worker:
     
     
     def kill(self)->None:
+        self.profile_seed.kill()
         self.browser.kill()

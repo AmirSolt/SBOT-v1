@@ -124,18 +124,18 @@ class ProfileManager:
                 password="48f&S2cnl1x2"),
         ]
         
-    def get_seeds(self, num:int)->list[ProfileSeed]:
-        non_active_seeds = [seed for seed in self.profile_seeds if seed.is_active]
-        if num > len(non_active_seeds):
-            raise Exception(f"==== only {len(non_active_seeds)} seeds are available. You asked for {num} ====")
+    # def get_seeds(self, num:int)->list[ProfileSeed]:
+    #     non_active_seeds = [seed for seed in self.profile_seeds if seed.is_active]
+    #     if num > len(non_active_seeds):
+    #         raise Exception(f"==== only {len(non_active_seeds)} seeds are available. You asked for {num} ====")
         
-        return [self.get_oldest_active() for i in range(num)]
+    #     return [self.get_oldest_active() for i in range(num)]
         
-    def get_oldest_active(self)->ProfileSeed:
+    def get_profile_seed(self)->ProfileSeed|None:
         self.__sort_seeds()
-        non_active_seeds = [seed for seed in self.profile_seeds if seed.is_active]
+        non_active_seeds = [seed for seed in self.profile_seeds if not seed.is_active]
         if not non_active_seeds:
-            raise Exception("No profile is available")
+            return None
         return non_active_seeds[0]
     
     def __sort_seeds(self):
