@@ -463,7 +463,7 @@ function getTopGroups(floorInfo) {
         }
         getDict() {
             return {
-                actionType: this.actionType,
+                action_type: this.actionType,
                 path: this.getPath(),
             }
         }
