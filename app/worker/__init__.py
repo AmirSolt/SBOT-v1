@@ -2,6 +2,7 @@
 from ..browser import Browser
 from ..profile import Profile
 from ..actor import Actor
+from ..state import State
 
 from d_types import ParsedInputAnswer, get_parsed_input_answers, Group, convert_to_group
 from static.profile_manager import ProfileSeed
@@ -28,6 +29,7 @@ class Worker:
         self.browser = Browser(self.worker_id, headless=False, use_subprocess=True)
         self.profile = Profile(self.worker_id)
         self.actor = Actor(self.browser)
+        self.state = State(self.browser)
 
         self.last_group_ids = []
     
@@ -53,13 +55,30 @@ class Worker:
         vacuum.clean_old_files(self.worker_id)
         pauser.test_pause()
         
-        # >>> state url and some conditions
+        if self.state.is_other_page():
+            # go to login
+            return True
+        
+        if self.state.is_login_page():
+            # login
+            return True
+        
+        if self.state.is_menu_page():
+            whale = self.state.get_whale_survey_url()
+            if whale:
+                # go to survey
+                return True
+            else:
+                return False
+        
+        
         parsed_groups = self.browser.get_parsed_groups()
         groups = [convert_to_group(p) for p in parsed_groups]
         group = self.__update_parsed_group(groups)
         
         if not group:
             print("======= No group ======")
+            # help
             return True
         
         # >>> state
@@ -67,10 +86,22 @@ class Worker:
         # if no ielements
         # if one ielement is type select
         
+        if self.state.is_group_solvable(group):
+            # help
+            return True
+        
+        if not self.state.is_group_single_option(group):
+            # solve
+            return True
+        
         context = self.profile.get_context(group.search_verbose)
         answer = AI.answer_parsed_group(group.chat_verbose, self.worker_id, context)
         parsed_input_answers:list[ParsedInputAnswer] = get_parsed_input_answers(group.ielements, answer)
         # >>> state if answer was not valid
+        
+        if not self.state.is_ai_answer_valid(parsed_input_answers):
+            # help
+            return True
         
         # change context
         # solve input
