@@ -1,5 +1,5 @@
 
-
+from funcs import AI
 import re
 
 
@@ -13,9 +13,10 @@ class ActionType:
 
 class IElement:
     
-    def  __init__(self, action_type:str, path:str) -> None:
+    def  __init__(self, action_type:str, path:str, options:list[str]|None) -> None:
         self.action_type = action_type
         self.path = path
+        self.options = options
 
 class Group:
     
@@ -32,7 +33,7 @@ class Group:
         self.chat_verbose = chat_verbose 
         self.search_verbose = search_verbose 
         self.is_media_group = is_media_group 
-        self.ielements = [IElement(e["action_type"], e["path"]) for e in ielements] 
+        self.ielements = [IElement(e["action_type"], e["path"], e.get("options")) for e in ielements] 
         
 
 def convert_to_group(parsed_group:dict)->Group:
@@ -55,12 +56,29 @@ class ParsedInputAnswer:
     def __init__(self, ielements:list[IElement], raw_input_answer:str) -> None:
         self.raw_input_answer = raw_input_answer
         parsed_dict = self.__parse_answer(raw_input_answer)
-        self.id = parsed_dict.get("id")
-        self.answer = parsed_dict.get("answer")
-        self.option = parsed_dict.get("option")
+        self.id:str|None = parsed_dict.get("id")
+        self.answer:str|None = parsed_dict.get("answer")
+        self.option:str|None = parsed_dict.get("option")
         
-        self.ielement:IElement = ielements[self.id]
+        self.ielement:IElement = None if self.id not in ielements else ielements[self.id]
+        
+    def is_answer_valid(self)->bool:
+        if not self.ielement:        
+            return False
+        if self.ielement.action_type == ActionType.select:
+            return self.id and not self.answer and not self.option
+        if self.ielement.action_type == ActionType.field:
+            return self.id and self.answer and not self.option
+        if self.ielement.action_type == ActionType.dropdown:
+            if not (self.id and not self.answer and self.option):
+                return False
+            if not self.ielement.options:
+                return False
+            fuzzy_matches = [AI.is_fuzzy_match(self.option, opt) for opt in self.ielement.options]
+            return True in fuzzy_matches
 
+        return False
+    
     def __parse_answer(self, text:str)->dict:
         """
         "id:1 answer:hello world" -> {"id":1, "answer":"hello world"}

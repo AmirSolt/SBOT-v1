@@ -27,19 +27,43 @@ class ProfileSeed:
         self.last_name = last_name
         
         self.profile_dir = config.PROFILE_DIR.format(worker_id=self.id)
-        self.profile_info_path = config.PROFILE_INFO_FILE.format(worker_id=self.id)
+        self.profile_seed_path = config.PROFILE_INFO_FILE.format(worker_id=self.id)
         
-        self.load_info()
+        self.load_seed()
         
-    def load_info(self):
-        info = {}
+    def load_seed(self):
+        seed = {}
         utils.create_dir_if_not_exist(self.profile_dir)
-        if utils.does_file_exist(self.profile_info_path): 
-            info = utils.read_file(self.profile_info_path)
+        if utils.does_file_exist(self.profile_seed_path): 
+            seed = utils.read_file(self.profile_seed_path)
+            self.set_from_dict(seed)
             
-        if not info:
+        if not seed["info"]:
             info = self.__generate_info(info)
-            utils.write_file(self.profile_info_path, info)
+            seed = self.get_dict(info)
+            utils.write_file(self.profile_seed_path, seed)
+
+    def set_from_dict(self, seed):
+        self.id= seed["id"]
+        self.is_active= seed["is_active"]
+        self.last_active= seed["last_active"]
+        self.email = seed["email"]
+        self.password = seed["password"]
+
+    def get_dict(self, info):
+        return {
+            "id":self.id,
+            "email":self.email,
+            "password":self.password,
+            "is_active":self.is_active,
+            "last_active":self.last_active,
+            "info":info,
+        }
+
+    def update_seed_file(self):
+        seed = utils.read_file(self.profile_seed_path)
+        seed = self.get_dict(seed["info"])
+        utils.write_file(self.profile_seed_path, seed)
            
     def get_id(self, first_name, last_name)->str:
         return f"{first_name} {last_name}"
@@ -107,10 +131,12 @@ class ProfileSeed:
     def activate(self):
         self.last_active = int(time.time())
         self.is_active = True
+        self.update_seed_file()
     
     def kill(self):
         self.last_active = int(time.time())
         self.is_active = False
+        self.update_seed_file()
 
 class ProfileManager:
     
@@ -124,19 +150,16 @@ class ProfileManager:
                 password="48f&S2cnl1x2"),
         ]
         
-    # def get_seeds(self, num:int)->list[ProfileSeed]:
-    #     non_active_seeds = [seed for seed in self.profile_seeds if seed.is_active]
-    #     if num > len(non_active_seeds):
-    #         raise Exception(f"==== only {len(non_active_seeds)} seeds are available. You asked for {num} ====")
-        
-    #     return [self.get_oldest_active() for i in range(num)]
-        
     def get_profile_seed(self)->ProfileSeed|None:
+        self.__refresh_seeds()
         self.__sort_seeds()
         non_active_seeds = [seed for seed in self.profile_seeds if not seed.is_active]
         if not non_active_seeds:
             return None
         return non_active_seeds[0]
+    
+    def __refresh_seeds(self):
+        [seed.load_seed() for seed in self.profile_seeds]
     
     def __sort_seeds(self):
         self.profile_seeds.sort(key=lambda x: x.last_active, reverse=False)

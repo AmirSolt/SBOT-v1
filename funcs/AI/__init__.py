@@ -35,7 +35,8 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 
-
+# ================================================================================
+# search
 
 def embed_str(text:str)->list[float]:
     return model.encode(text).tolist()
@@ -53,8 +54,6 @@ def get_similar_indecies(embeddings:list[list[float]], target:list[float], thres
     result_indecies = recommendations_from_embeddings(array_embeddings, target_embeddings, threshold, method)
     
     return result_indecies.tolist()
-
-
 
 def recommendations_from_embeddings(
    array_embeddings: np.ndarray,
@@ -84,6 +83,13 @@ def recommendations_from_embeddings(
 
 
 
+
+
+# ================================================================================
+# chatgpt
+
+
+
 def answer_parsed_group(group_verbose, worker_name:str, context)->str:
     messages = get_chat_messages(group_verbose, worker_name, context)
     chat_completion = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages, temperature=config.CHAT_TEMPERATURE)
@@ -104,3 +110,18 @@ def get_chat_messages(group_verbose, worker_name:str, context):
     {"role": "user", "content": group_verbose}
     )
     return messages
+
+
+# ================================================================================
+# fuzzy matching
+
+
+from thefuzz import fuzz
+FUZZY_THRESH = 70   
+
+def is_fuzzy_match(t1:str, t2:str)->bool:
+    similarity_ratio = fuzz.ratio(t1.lower(), t2.lower())
+    return similarity_ratio >= FUZZY_THRESH
+ 
+def get_highest_fuzzy_match_index(t1:str, texts:list[str])->int:
+   pass

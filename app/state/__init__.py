@@ -1,6 +1,6 @@
 
 from ..browser import Browser
-from d_types import ParsedInputAnswer
+from d_types import ParsedInputAnswer, Group, IElement, ActionType
 from helper import config
 import re
 
@@ -27,13 +27,17 @@ class State:
         
         return whale_url
 
-    def is_group_solvable(self, group):
-        # is media
-        # is no ielement
-        pass
+    def is_group_solvable(self, group:Group):
+        if group.is_media_group:
+            return False
+        if len(group.ielements) == 0:
+            return False
+        return True
 
-    def is_group_single_option(self, group):
-        pass
+    def is_group_single_select(self, group:Group):
+        if len(group.ielements) != 1:
+            return False
+        return group.ielements[0].action_type == ActionType.select
 
-    def is_ai_answer_valid(self, parsed_input_answers:list[ParsedInputAnswer]):
-        pass
+    def is_ai_answer_valid(self, parsed_input_answer:ParsedInputAnswer):
+        return parsed_input_answer.is_answer_valid()

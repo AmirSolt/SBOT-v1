@@ -33,7 +33,7 @@ class Worker:
 
         self.last_group_ids = []
     
-    def __update_parsed_group(self, groups:list[Group])->Group|None:
+    def __filter_parsed_groups(self, groups:list[Group])->Group|None:
         if not groups:
             return None
         
@@ -79,7 +79,7 @@ class Worker:
         
         parsed_groups = self.browser.get_parsed_groups()
         groups = [convert_to_group(p) for p in parsed_groups]
-        group = self.__update_parsed_group(groups)
+        group = self.__filter_parsed_groups(groups)
         
         if not group:
             self.actor.help("No group")
@@ -89,7 +89,7 @@ class Worker:
             self.actor.help("Group not solvable")
             return True
         
-        if self.state.is_group_single_option(group):
+        if self.state.is_group_single_select(group):
             self.actor.solve_select_type(group.ielements[0].path)
             return True
         
