@@ -11,12 +11,14 @@ if __name__ == '__main__':
         
     worker = Worker(profile_seed)
     try:
-        while True:
-            
-            # if state allows (whales remaining)
+        
+        is_over = False
+        while not is_over:
             
             input(">>> next tick:")
             
-            worker.tick()
+            if not worker.tick():
+                is_over = True
+            
     finally:
         worker.kill()

@@ -44,7 +44,7 @@ class Worker:
         return r
         
     
-    def tick(self)->None:
+    def tick(self)->bool:
         
         
         print("========== tick starts ==========")
@@ -60,7 +60,7 @@ class Worker:
         
         if not group:
             print("======= No group ======")
-            return
+            return True
         
         # >>> state
         # if Media
@@ -83,6 +83,8 @@ class Worker:
         print("=============")
         print("answer:\n",answer)
         print("=============")
+        
+        return True
         
 
 
