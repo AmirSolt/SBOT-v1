@@ -27,7 +27,7 @@ class ProfileSeed:
         self.last_name = last_name
         
         self.profile_dir = config.PROFILE_DIR.format(worker_id=self.id)
-        self.profile_seed_path = config.PROFILE_INFO_FILE.format(worker_id=self.id)
+        self.profile_seed_path = config.PROFILE_SEED_FILE.format(worker_id=self.id)
         
         self.load_seed()
         
@@ -38,7 +38,8 @@ class ProfileSeed:
             seed = utils.read_file(self.profile_seed_path)
             self.set_from_dict(seed)
             
-        if not seed["info"]:
+        if not seed.get("info"):
+            info = {}
             info = self.__generate_info(info)
             seed = self.get_dict(info)
             utils.write_file(self.profile_seed_path, seed)
@@ -87,8 +88,8 @@ class ProfileSeed:
         self.__add_to_info(info,"birth month", "8")
         self.__add_to_info(info,"birth year", "1991")
         self.__add_to_info(info,"gender", "male")
-        self.__add_to_info(info,"pets", "dog")
-        self.__add_to_info(info,"pets", "cat")
+        self.__add_to_info(info,"do you have a dog pet", "yes")
+        self.__add_to_info(info,"do you have a cat pet", "yes")
         self.__add_to_info(info,"grocery shopping", "I do all shopping")
         self.__add_to_info(info,"living situation", "own home")
         self.__add_to_info(info,"marital status", "married")

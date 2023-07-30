@@ -28,7 +28,7 @@ class Profile:
         
         self.profile_dir = config.PROFILE_DIR.format(worker_id=worker_id)
         self.profile_memory_dir = config.PROFILE_MEMORY_DIR.format(worker_id=worker_id)
-        self.profile_seed_path = config.PROFILE_INFO_FILE.format(worker_id=worker_id)
+        self.profile_seed_path = config.PROFILE_SEED_FILE.format(worker_id=worker_id)
         self.perm_memory_path = config.PROFILE_PERM_MEM_FILE.format(worker_id=worker_id)
         self.survey_memory_path = config.PROFILE_SURVEY_MEM_FILE.format(worker_id=worker_id)
         
@@ -121,8 +121,8 @@ class Profile:
         
 
     def __load_perm_memory(self):
-        profile_info = utils.read_file(self.profile_seed_path)
-        for key, value in profile_info.items():
+        profile_seed = utils.read_file(self.profile_seed_path)
+        for key, value in profile_seed["info"].items():
             self.__add_to_perm_memory(key, value)
         
     

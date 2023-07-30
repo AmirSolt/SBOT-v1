@@ -58,7 +58,7 @@ class Worker:
         
         browser_url = self.browser.current_url
         print("browser_url",browser_url)
-        if self.state.is_page(browser_url, ""):
+        if self.state.is_page(browser_url, config.CHROME_WELCOME_URL):
             self.actor.go_to(config.LOGIN_URL)
             return True
         
