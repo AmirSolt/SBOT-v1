@@ -24,4 +24,8 @@ PROFILE_SURVEY_MEM_FILE = PROFILE_MEMORY_DIR + "survey_memory.json" # .GITIGNORE
 SCRIPT_MAIN_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/main.js"
 
 
+LOGIN_URL = "https://www.surveyjunkie.com/"
+MENU_URL = "https://www.surveyjunkie.com/member"
+
+WHALE_SURVEY_LIMIT = 10
 CHAT_TEMPERATURE = 0.3

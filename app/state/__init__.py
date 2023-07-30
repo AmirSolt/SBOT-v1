@@ -1,6 +1,10 @@
 
 from ..browser import Browser
 from d_types import ParsedInputAnswer
+from helper import config
+import re
+
+
 
 
 class State:
@@ -8,19 +12,24 @@ class State:
     def __init__(self, browser:Browser) -> None:
         self.browser = browser
     
-    def is_other_page(self, ):
-        pass
+    def is_page(self, browser_url, dest_url):
+        return browser_url == dest_url
 
-    def is_login_page(self, ):
-        pass
-
-    def is_menu_page(self, ):
-        pass
-
-    def get_whale_survey_url(self, ):
-        pass
+    def get_whale_survey_url(self, )->str:
+        whale_url = ""
+        boxes = self.browser.find_elements('.survey-v2-group a', "")
+        for box in boxes:
+            ppm = box.find_element(".survey-v2-points-ppm", "")
+            number = re.findall(r'\d+', ppm.text)
+            if config.WHALE_SURVEY_LIMIT >= int(number):
+                whale_url = box.get_attribute("href")
+                return whale_url
+        
+        return whale_url
 
     def is_group_solvable(self, group):
+        # is media
+        # is no ielement
         pass
 
     def is_group_single_option(self, group):

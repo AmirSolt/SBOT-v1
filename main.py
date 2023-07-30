@@ -17,8 +17,7 @@ if __name__ == '__main__':
             
             input(">>> next tick:")
             
-            if not worker.tick():
-                is_over = True
+            is_over = not worker.tick()
             
     finally:
         worker.kill()

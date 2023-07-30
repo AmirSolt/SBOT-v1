@@ -55,21 +55,26 @@ class Worker:
         vacuum.clean_old_files(self.worker_id)
         pauser.test_pause()
         
-        if self.state.is_other_page():
-            # go to login
+        
+        browser_url = self.browser.current_url
+        print("browser_url",browser_url)
+        if self.state.is_page(browser_url, ""):
+            self.actor.go_to(config.LOGIN_URL)
             return True
         
-        if self.state.is_login_page():
-            # login
+        if self.state.is_page(browser_url, config.LOGIN_URL):
+            self.actor.login_survey_junkie()
             return True
         
-        if self.state.is_menu_page():
-            whale = self.state.get_whale_survey_url()
-            if whale:
-                # go to survey
+        if self.state.is_page(browser_url, config.MENU_URL):
+            whale_url = self.state.get_whale_survey_url()
+            if whale_url:
+                self.actor.go_to(whale_url)
                 return True
             else:
                 return False
+            
+        
         
         
         parsed_groups = self.browser.get_parsed_groups()
@@ -77,36 +82,21 @@ class Worker:
         group = self.__update_parsed_group(groups)
         
         if not group:
-            print("======= No group ======")
-            # help
+            self.actor.help("No group")
             return True
         
-        # >>> state
-        # if Media
-        # if no ielements
-        # if one ielement is type select
-        
-        if self.state.is_group_solvable(group):
-            # help
+        if not self.state.is_group_solvable(group):
+            self.actor.help("Group not solvable")
             return True
         
-        if not self.state.is_group_single_option(group):
-            # solve
+        if self.state.is_group_single_option(group):
+            self.actor.solve_select_type(group.ielements[0].path)
             return True
         
         context = self.profile.get_context(group.search_verbose)
         answer = AI.answer_parsed_group(group.chat_verbose, self.worker_id, context)
         parsed_input_answers:list[ParsedInputAnswer] = get_parsed_input_answers(group.ielements, answer)
-        # >>> state if answer was not valid
         
-        if not self.state.is_ai_answer_valid(parsed_input_answers):
-            # help
-            return True
-        
-        # change context
-        # solve input
-        
-
         print("=============")
         print("context:\n",context)
         print("=============")
@@ -115,6 +105,13 @@ class Worker:
         print("answer:\n",answer)
         print("=============")
         
+        for parsed_input_answer in parsed_input_answers:
+            if not self.state.is_ai_answer_valid(parsed_input_answer):
+                print(parsed_input_answers)
+                self.actor.help("AI answer is not valid")
+            else:
+                self.actor.solve_input_answer(parsed_input_answer)
+
         return True
         
 
