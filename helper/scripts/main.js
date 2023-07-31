@@ -926,7 +926,7 @@ const instructionMargin = 4;
 const minMediaSize = 3;
 const minImageSize = 10;
 
-const FLOOR_EDGE = 7
+const FLOOR_EDGE = 5
 
 
 const page = new Rect(window.scrollX, window.scrollY, document.body.clientWidth, document.body.clientHeight)

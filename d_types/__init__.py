@@ -61,17 +61,17 @@ class ParsedInputAnswer:
         self.option:str|None = parsed_dict.get("option")
         
         self.context_path = context_path
-        self.ielement:IElement = None if self.id not in ielements else ielements[self.id]
+        self.ielement:IElement = None if int(self.id) < len(ielements) else ielements[int(self.id)]
         
     def is_answer_valid(self)->bool:
         if not self.ielement:        
             return False
         if self.ielement.action_type == ActionType.select:
-            return self.id and not self.answer and not self.option
+            return self.id
         if self.ielement.action_type == ActionType.field:
-            return self.id and self.answer and not self.option
+            return self.id and self.answer
         if self.ielement.action_type == ActionType.dropdown:
-            if not (self.id and not self.answer and self.option):
+            if not (self.id and self.option):
                 return False
             if not self.ielement.options:
                 return False
@@ -97,7 +97,7 @@ class ParsedInputAnswer:
         return r
     
     def __repr__(self):
-        return f"{self.id=} {self.answer=} {self.option=}"
+        return f"{self.id=}|{self.answer=}|{self.option=}| has ielement {self.ielement!=None}| {self.context_path=}"
     
   
     
