@@ -7,7 +7,7 @@ import os
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException, ElementNotSelectableException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException, ElementNotSelectableException, ElementNotInteractableException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
@@ -69,6 +69,8 @@ class Browser(uc.Chrome):
             return False
         except ElementNotSelectableException:
             return False
+        except ElementNotInteractableException:
+            return False
         self.context_switch("")
         return True
     
@@ -79,6 +81,8 @@ class Browser(uc.Chrome):
             element = self.find_element(By.CSS_SELECTOR, selector_path)
             element.send_keys(text)
         except NoSuchElementException:
+            return False
+        except ElementNotInteractableException:
             return False
         self.context_switch("")
         return True
@@ -92,6 +96,8 @@ class Browser(uc.Chrome):
         except NoSuchElementException:
             return False
         except ElementClickInterceptedException:
+            return False
+        except ElementNotInteractableException:
             return False
 
         self.context_switch("")
