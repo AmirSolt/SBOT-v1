@@ -23,9 +23,10 @@ def get_filename(path:str)->str:
     return os.path.basename(path)
 
 
-def convert_script_return(path):
+def convert_script(path, is_return=False):
     script = read_file(path)
-    script += "\nreturn msResult"
+    if is_return:
+        script += "\nreturn msResult"
     return script
         
 

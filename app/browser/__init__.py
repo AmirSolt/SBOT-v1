@@ -13,10 +13,11 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.color import Color
+from selenium.webdriver import ActionChains
 
 
-
-HIGHLIGHT_SCRIPT = 'let target=document.querySelector(arguments[0]);target.style.borderColor=arguments[1],target.style.borderStyle="solid";var container=document.createElement("div");container.style.position="relative";var label=document.createElement("div");label.textContent=arguments[2],label.style.position="absolute",label.style.top="-40px",label.style.left="0",label.style.borderColor="red",label.style.borderStyle="solid",container.insertBefore(label,container.firstChild),target.insertBefore(container,target.firstChild);'
+SCROLL_SCRIPT = utils.convert_script(config.SCRIPT_SCROLL_PATH, is_return=False)
+HIGHLIGHT_SCRIPT = utils.convert_script(config.HIGHLIGHT_PATH, is_return=False)
 
 
 
@@ -37,7 +38,6 @@ class Browser(uc.Chrome):
         
         options = self.__get_options()
         super().__init__(options, user_data_dir, driver_executable_path, browser_executable_path, port, enable_cdp_events, desired_capabilities, advanced_elements, keep_alive, log_level, headless, version_main, patcher_force_close, suppress_welcome, use_subprocess, debug, no_sandbox, user_multi_procs, **kw)
-        
         
         
         self.__init_filesys()
@@ -63,12 +63,16 @@ class Browser(uc.Chrome):
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
+            self.scroll_to_element(element)
             Select(element).select_by_index(index)
         except NoSuchElementException:
+            print(f">> Can't find element path: {selector_path}")
             return False
         except ElementNotSelectableException:
+            print(f">> element is not selectable: {selector_path}")
             return False
         except ElementNotInteractableException:
+            print(f">> element is not interactable: {selector_path}")
             return False
         self.context_switch("")
         return True
@@ -78,10 +82,13 @@ class Browser(uc.Chrome):
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
+            self.scroll_to_element(element)
             element.send_keys(text)
         except NoSuchElementException:
+            print(f">> Can't find element path: {selector_path}")
             return False
         except ElementNotInteractableException:
+            print(f">> element is not interactable: {selector_path}")
             return False
         self.context_switch("")
         return True
@@ -91,12 +98,16 @@ class Browser(uc.Chrome):
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
+            self.scroll_to_element(element)
             element.click()
         except NoSuchElementException:
+            print(f">> Can't find element path: {selector_path}")
             return False
         except ElementClickInterceptedException:
+            print(f">> element is not clickable: {selector_path}")
             return False
         except ElementNotInteractableException:
+            print(f">> element is not interactable: {selector_path}")
             return False
 
         self.context_switch("")
@@ -130,13 +141,11 @@ class Browser(uc.Chrome):
             
     
     def highlight_element(self, selector_path:str, iframe_path:str, color:str, label:str)->bool:
-        if iframe_path:
-            iframe = self.find_element(iframe_path, "")
-            self.switch_to.frame(iframe)
+        self.context_switch(iframe_path)
             
         self.execute_script(HIGHLIGHT_SCRIPT, selector_path, color, label )
     
-        self.switch_to.default_content()
+        self.context_switch("")
         
 
     
@@ -152,8 +161,11 @@ class Browser(uc.Chrome):
         self.__save_page_html(page_html)
         return page_html
     
+    def scroll_to_element(self, element):
+        self.execute_script(SCROLL_SCRIPT, element)
+    
     def get_parsed_groups(self)->list[dict]:
-        PARSER_ELEMENTS_SCRIPT = utils.convert_script_return(config.SCRIPT_MAIN_PATH)
+        PARSER_ELEMENTS_SCRIPT = utils.convert_script(config.SCRIPT_MAIN_PATH, is_return=True)
         parsed_groups = []
         # try:
         parsed_groups = self.execute_script(PARSER_ELEMENTS_SCRIPT)
@@ -166,8 +178,8 @@ class Browser(uc.Chrome):
         utils.create_dir_if_not_exist(self.parsed_html_dir)
         self.__save_parsed_html(parsed_groups)
         return parsed_groups
-        
-        
+    
+  
     
     def wait_till_page_loads(self):
         WebDriverWait(self, 10).until(EC.presence_of_element_located((By.TAG_NAME, "body")))

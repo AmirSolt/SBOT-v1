@@ -20,7 +20,8 @@ PROFILE_MEMORY_DIR = PROFILE_DIR + "memory/"  # .GITIGNORE
 PROFILE_PERM_MEM_FILE = PROFILE_MEMORY_DIR + "perm_memory.json" # .GITIGNORE
 PROFILE_SURVEY_MEM_FILE = PROFILE_MEMORY_DIR + "survey_memory.json" # .GITIGNORE
 
-
+HIGHLIGHT_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/highlight.js"
+SCRIPT_SCROLL_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/scroll.js"
 SCRIPT_MAIN_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/main.js"
 
 CHROME_WELCOME_URL = "chrome://welcome/"

@@ -31,7 +31,7 @@ def action_pause():
 
 def test_pause():
 
-    pause_duration = 0.2
+    pause_duration = 4
 
     print(f"TEST PAUSE: {pause_duration}s")
 

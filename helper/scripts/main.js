@@ -172,8 +172,8 @@ class Rect {
     }
     static elementToRect(element) {
         const domRect = element.getBoundingClientRect()
-        // new Rect(domRect.left + window.scrollX, domRect.top + window.scrollY, domRect.width, domRect.height)
-        return new Rect(domRect.left, domRect.top, domRect.width, domRect.height)
+        return new Rect(domRect.left + window.scrollX, domRect.top + window.scrollY, domRect.width, domRect.height)
+        // return new Rect(domRect.left, domRect.top, domRect.width, domRect.height)
     }
     static isWithinMargin(rect0, rect1, distance, directions) {
         const directionsArr = directions.split(",")
@@ -976,6 +976,7 @@ const minImageSize = 5;
 const FLOOR_EDGE = 18
 const FLOOR_MUTL = 4
 
+// document.body.style.zoom='25%'
 
 const page = new Rect(window.scrollX, window.scrollY, document.body.clientWidth, document.body.clientHeight)
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
