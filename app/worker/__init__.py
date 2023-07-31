@@ -90,12 +90,12 @@ class Worker:
             return True
         
         if self.state.is_group_single_select(group):
-            self.actor.solve_select_type(group.ielements[0].path)
+            self.actor.solve_select_type(group.ielements[0].path, group.context_path)
             return True
         
         context = self.profile.get_context(group.search_verbose)
         answer = AI.answer_parsed_group(group.chat_verbose, self.worker_id, context)
-        parsed_input_answers:list[ParsedInputAnswer] = get_parsed_input_answers(group.ielements, answer)
+        parsed_input_answers:list[ParsedInputAnswer] = get_parsed_input_answers(group, answer)
         
         print("=============")
         print("context:\n",context)

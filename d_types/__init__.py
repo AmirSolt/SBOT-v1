@@ -53,13 +53,14 @@ def convert_to_group(parsed_group:dict)->Group:
 
 class ParsedInputAnswer:
 
-    def __init__(self, ielements:list[IElement], raw_input_answer:str) -> None:
+    def __init__(self, context_path:str, ielements:list[IElement], raw_input_answer:str) -> None:
         self.raw_input_answer = raw_input_answer
         parsed_dict = self.__parse_answer(raw_input_answer)
         self.id:str|None = parsed_dict.get("id")
         self.answer:str|None = parsed_dict.get("answer")
         self.option:str|None = parsed_dict.get("option")
         
+        self.context_path = context_path
         self.ielement:IElement = None if self.id not in ielements else ielements[self.id]
         
     def is_answer_valid(self)->bool:
@@ -96,11 +97,11 @@ class ParsedInputAnswer:
         return r
     
     
-def get_parsed_input_answers(ielements:list[IElement], raw_answer:str)->list[ParsedInputAnswer]:
+def get_parsed_input_answers(group:Group, raw_answer:str)->list[ParsedInputAnswer]:
     if not raw_answer:
         return []
     raw_input_answers = raw_answer.split("\n")
-    return [ParsedInputAnswer(ielements, raw_input_answer) for raw_input_answer in raw_input_answers if raw_input_answer.strip()!=""]
+    return [ParsedInputAnswer(group.context_path, group.ielements, raw_input_answer) for raw_input_answer in raw_input_answers if raw_input_answer.strip()!=""]
 
 
 

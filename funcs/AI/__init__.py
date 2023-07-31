@@ -124,4 +124,5 @@ def is_fuzzy_match(t1:str, t2:str)->bool:
     return similarity_ratio >= FUZZY_THRESH
  
 def get_highest_fuzzy_match_index(t1:str, texts:list[str])->int:
-   pass
+   scores = [fuzz.ratio(t1.lower(), text.lower()) for text in texts]
+   return scores.index(max(scores))

@@ -17,7 +17,7 @@ class State:
 
     def get_whale_survey_url(self, )->str:
         whale_url = ""
-        boxes = self.browser.find_elements('.survey-v2-group a', "")
+        boxes = self.browser.get_elements('.survey-v2-group a', "")
         for box in boxes:
             ppm = box.find_element(".survey-v2-points-ppm", "")
             number = re.findall(r'\d+', ppm.text)

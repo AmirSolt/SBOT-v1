@@ -7,11 +7,11 @@ import os
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, ElementClickInterceptedException, ElementNotSelectableException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
-
-
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.color import Color
 
 
@@ -60,13 +60,48 @@ class Browser(uc.Chrome):
             self.__load_cookies()
     
     
+    def choose_option(self, selector_path:str, iframe_path:str, index:int)->list[WebElement]:
+        self.context_switch(iframe_path)
+        try:
+            element = self.find_element(By.CSS_SELECTOR, selector_path)
+            Select(element).select_by_index(index)
+        except NoSuchElementException:
+            return False
+        except ElementNotSelectableException:
+            return False
+        self.context_switch("")
+        return True
     
-    def find_elements(self, selector_path:str, iframe_path:str)->list[WebElement]:
+    
+    def fill_field(self, selector_path:str, iframe_path:str, text:str)->list[WebElement]:
+        self.context_switch(iframe_path)
+        try:
+            element = self.find_element(By.CSS_SELECTOR, selector_path)
+            element.send_keys(text)
+        except NoSuchElementException:
+            return False
+        self.context_switch("")
+        return True
+    
+    
+    def click_element(self, selector_path:str, iframe_path:str)->list[WebElement]:
+        self.context_switch(iframe_path)
+        try:
+            element = self.find_element(By.CSS_SELECTOR, selector_path)
+            element.click()
+        except NoSuchElementException:
+            return False
+        except ElementClickInterceptedException:
+            return False
+
+        self.context_switch("")
         
-        if iframe_path:
-            iframe = self.find_element(iframe_path, "")
-            self.switch_to.frame(iframe)
-            
+        return True
+    
+    
+    def get_elements(self, selector_path:str, iframe_path:str)->list[WebElement]:
+        
+        self.context_switch(iframe_path)
             
         elements = []  
         try:
@@ -74,11 +109,19 @@ class Browser(uc.Chrome):
         except NoSuchElementException:
             elements = []
 
-        
-        self.switch_to.default_content()
+        self.context_switch("")
         
         return elements
     
+
+    def context_switch(self, iframe_path):
+        if iframe_path:
+            iframe = self.find_element(iframe_path, "")
+            self.switch_to.frame(iframe)
+        else:
+            self.switch_to.default_content()
+            
+            
     
     def highlight_element(self, selector_path:str, iframe_path:str, color:str, label:str)->bool:
         if iframe_path:
