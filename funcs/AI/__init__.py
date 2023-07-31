@@ -13,13 +13,13 @@ load_dotenv()
 
 
 CHAT_INSTRUCTIONS = """Role play as {name}. You are given a survey question and are required to answer it. To answer the question pay attention to [input:... id:...]. Answer one or many inputs if needed. include input's id in your response. If there are multiple choice and you are not confident you can just pick any. You can only respond in the following formats for each input. 
-If [input:Field id:x] respond like so:
+if input type is Submit, only respond with "id"
+if input type is Select, only respond with "id"
+if input type is Field, respond with "id" and "answer"
+if input type is Dropdown, respond with "id" and "option"
+example response:
+id:x
 id:x answer:...
-If [input:Select id:x] respond like so:
-id:x
-If [input:Submit id:x] respond like so:
-id:x
-If [input:Dropdown id:x] respond like so:
 id:x option:...
 
 some information about {name}:

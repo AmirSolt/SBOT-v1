@@ -19,7 +19,6 @@ from selenium.webdriver.support.color import Color
 HIGHLIGHT_SCRIPT = 'let target=document.querySelector(arguments[0]);target.style.borderColor=arguments[1],target.style.borderStyle="solid";var container=document.createElement("div");container.style.position="relative";var label=document.createElement("div");label.textContent=arguments[2],label.style.position="absolute",label.style.top="-40px",label.style.left="0",label.style.borderColor="red",label.style.borderStyle="solid",container.insertBefore(label,container.firstChild),target.insertBefore(container,target.firstChild);'
 
 
-PARSER_ELEMENTS_SCRIPT = utils.convert_script_return(config.SCRIPT_MAIN_PATH)
 
 
 class Browser(uc.Chrome):
@@ -60,7 +59,7 @@ class Browser(uc.Chrome):
             self.__load_cookies()
     
     
-    def choose_option(self, selector_path:str, iframe_path:str, index:int)->list[WebElement]:
+    def choose_option(self, selector_path:str, iframe_path:str, index:int)->bool:
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
@@ -75,7 +74,7 @@ class Browser(uc.Chrome):
         return True
     
     
-    def fill_field(self, selector_path:str, iframe_path:str, text:str)->list[WebElement]:
+    def fill_field(self, selector_path:str, iframe_path:str, text:str)->bool:
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
@@ -88,7 +87,7 @@ class Browser(uc.Chrome):
         return True
     
     
-    def click_element(self, selector_path:str, iframe_path:str)->list[WebElement]:
+    def click_element(self, selector_path:str, iframe_path:str)->bool:
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
@@ -154,7 +153,14 @@ class Browser(uc.Chrome):
         return page_html
     
     def get_parsed_groups(self)->list[dict]:
+        PARSER_ELEMENTS_SCRIPT = utils.convert_script_return(config.SCRIPT_MAIN_PATH)
+        parsed_groups = []
+        # try:
         parsed_groups = self.execute_script(PARSER_ELEMENTS_SCRIPT)
+        # except Exception as e:
+        #     print("=== parse script failed ===")
+        #     print(e)
+        #     print("=== ============== ===")
         if not parsed_groups:
             parsed_groups = []
         utils.create_dir_if_not_exist(self.parsed_html_dir)

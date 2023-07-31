@@ -72,8 +72,10 @@ class Worker:
             whale_url = self.state.get_whale_survey_url()
             if whale_url:
                 self.actor.go_to(whale_url)
+                pauser.test_pause()
                 return True
             else:
+                print(">> No whale found exiting..")
                 return False
             
         

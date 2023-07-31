@@ -39,21 +39,31 @@ class Actor:
 
 
     def solve_field(self, element_path:str, answer:str, context_path:str):
-        self.browser.fill_field(element_path, context_path, answer)
-        pauser.action_pause()
+        if self.browser.fill_field(element_path, context_path, answer):
+            print("action: [solve_field]")
+            pauser.action_pause()
+        else:
+            print("failed action: [solve_field]")
         
 
     def solve_select_type(self, element_path:str, context_path:str):
-        self.browser.click_element(element_path, context_path)
-        pauser.action_pause()
+        if self.browser.click_element(element_path, context_path):
+            print("action: [solve_select_type]")
+            pauser.action_pause()
+        else:
+            print("failed action: [solve_select_type]")
 
     def solve_dropdown(self, element_path:str, chosen_option:str, options:list[str], context_path:str):
         index = AI.get_highest_fuzzy_match_index(chosen_option, options)
-        self.browser.choose_option(element_path, context_path, index)
-        pauser.action_pause()
+        if self.browser.choose_option(element_path, context_path, index):
+            print("action: [solve_dropdown]")
+            pauser.action_pause()
+        else:
+            print("failed action: [solve_dropdown]")
     
 
     
     def go_to(self, url):
+        print("action: [go_to]")
         self.browser.get(url)
         pauser.action_pause()

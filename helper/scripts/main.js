@@ -111,6 +111,19 @@ function getDirectText(el) {
     }
     return cleanText(directText)
 }
+function isValidHttpUrl(string) {
+    if(string[0]=="/")
+        return true
+
+    let url;
+    try {
+      url = new URL(string);
+    } catch (_) {
+      return false;  
+    }
+  
+    return url.protocol === "http:" || url.protocol === "https:" 
+}
 
 
 const ActionType = {
@@ -387,7 +400,7 @@ function getTopGroups(floorInfo) {
         }
         static toAvoid(el){
             return (
-                (getElementTagname(el) === "a" && el.getAttribute("href") != null)
+                Segment.isLink(el)
             )
         }
         static isType(el) {
@@ -398,6 +411,18 @@ function getTopGroups(floorInfo) {
             if (Vis.isLowVis(style))
                 return false
             return true
+        }
+        static isLink(el){
+            return (
+                getElementTagname(el) === "a" &&
+                (
+                    (
+                    el.getAttribute("href") != null &&
+                    isValidHttpUrl(el.getAttribute("href"))
+                    ) ||
+                    el.getAttribute("target") == "_blank"
+                ) 
+            )
         }
         setGroup(group) {
             this.group = group
@@ -580,7 +605,7 @@ function getTopGroups(floorInfo) {
                 tagName != "input" &&
                 tagName != "button" &&
                 tagName != "select" &&
-                !(tagName == "a" && el.getAttribute("href") != null) &&
+                !Segment.isLink(el) &&
                 style.cursor === 'pointer'
             )
         }
@@ -598,6 +623,7 @@ function getTopGroups(floorInfo) {
                     getElementTagname(element) == "input" &&
                     (
                         element.getAttribute("type") == "text" ||
+                        element.getAttribute("type") == "textarea" ||
                         element.getAttribute("type") == "date" ||
                         element.getAttribute("type") == "email" ||
                         element.getAttribute("type") == "number" ||
@@ -751,7 +777,25 @@ function getTopGroups(floorInfo) {
             return this.segments.some(segment => segment instanceof MediaElement)
         }
         getID() {
-            return `@@@${this.segments.length}@@@${parseInt(this.rect.x)}@@@${parseInt(this.rect.y)}@@@${parseInt(this.rect.w)}@@@${parseInt(this.rect.h)}`
+            function roundToMultiple(num, mult) {
+                const remainder = num % mult;
+              
+                if (Math.abs(remainder) >= mult/2) {
+                  if (num < 0) {
+                    return Math.floor(num / mult) * mult;
+                  } else {
+                    return Math.ceil(num / mult) * mult;
+                  }
+                } else {
+                  return Math.round(num / mult) * mult;
+                }
+            }
+            const mult = 100;
+            const x = roundToMultiple(parseInt(this.rect.x), mult);
+            const y = roundToMultiple(parseInt(this.rect.y), mult);
+            const w = roundToMultiple(parseInt(this.rect.w), mult);
+            const h = roundToMultiple(parseInt(this.rect.h), mult);
+            return `#${x}#${y}#${w}#${h}#`
         }
         getDict() {
             return {
@@ -773,11 +817,11 @@ function getTopGroups(floorInfo) {
     function highlightGroups(groups) {
         groups.forEach((group, i) => {
             if (i == 0) {
-                highlight(group.rect, "#09E912", `${i}`)
+                highlight(group.rect, "#09E912", ``)
             } else if (i == groups.length - 1) {
-                highlight(group.rect, "#fc0303", `${i}`)
+                highlight(group.rect, "#fc0303", ``)
             } else {
-                highlight(group.rect, "#ace010", `${i}`)
+                highlight(group.rect, "#ace010", ``)
             }
         });
     }
@@ -797,7 +841,8 @@ function getTopGroups(floorInfo) {
             let segment = Segment.getSegment(element);
             if (segment) {
                 segments.push(segment);
-                return segments
+                if(segment instanceof IElement)
+                    return segments
             }
         }
         for (let i = 0; i < element.children.length; i++) {
@@ -810,18 +855,23 @@ function getTopGroups(floorInfo) {
 
     // ====================== Grouping ==========================
 
-    function isRectOnEdge(rect) {
-        let leftSide = FLOOR_EDGE * unit;
+    function isRectOnEdge(group) {
+        // let leftSide = FLOOR_EDGE * unit;
         let topSide = FLOOR_EDGE * unit;
-        let rightSide = page.w - leftSide;
-
-        if (rect.cx < leftSide ||
-            rect.cx > rightSide ||
-            rect.cy < topSide) {
-            return true;
-        } else {
-            return false;
-        }
+        // let rightSide = page.w - leftSide;
+        let bottomSide = page.h - topSide;
+        return (
+            !group.segments.some(segment=> segment instanceof ISubmit) &&
+            (
+                group.rect.w < FLOOR_EDGE*FLOOR_MUTL ||
+                group.rect.h < FLOOR_EDGE*FLOOR_MUTL 
+            ) &&
+            (
+                group.rect.cy > bottomSide ||
+                group.rect.cy < topSide
+            )
+            ) 
+    
     }
     function getLvl1Grouping(ielements, segments) {
         let groups = []
@@ -855,14 +905,14 @@ function getTopGroups(floorInfo) {
     }
     function removeEdgeGroups(groups) {
         return groups.filter(group => {
-            return !isRectOnEdge(group.rect);
+            return !isRectOnEdge(group);
         })
     }
     function sortGroups(groups) {
         return groups.sort((a, b) => {
-            const con = a.rect.cy - b.rect.cy
+            const con = a.rect.y - b.rect.y
             if (con === 0)
-                return b.rect.cx - a.rect.cx
+                return b.rect.x - a.rect.x
             return con
         })
     }
@@ -896,10 +946,6 @@ function getTopGroups(floorInfo) {
 
     let gSegments = getSegments(context)
 
-    // gSegments = cleanISelects(gSegments)
-
-    // highlightSegments(gSegments)
-
     console.log("segments:", gSegments)
 
     const gGroups = getGroups(gSegments)
@@ -921,13 +967,14 @@ const HIERARCHY_COEFFICIENT = 10;
 const AREA_COEFFICIENT = 10;
 const POS_COEFFICIENT = 10;
 
-const innerGroupMargin = 0.8;
+const innerGroupMargin = 1.4;
 const instructionMargin = 4;
 
 const minMediaSize = 3;
-const minImageSize = 10;
+const minImageSize = 5;
 
-const FLOOR_EDGE = 5
+const FLOOR_EDGE = 18
+const FLOOR_MUTL = 4
 
 
 const page = new Rect(window.scrollX, window.scrollY, document.body.clientWidth, document.body.clientHeight)
