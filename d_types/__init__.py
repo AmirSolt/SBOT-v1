@@ -17,6 +17,10 @@ class IElement:
         self.action_type = action_type
         self.path = path
         self.options = options
+        
+    def __repr__(self):
+        return f"\n{self.action_type=}|\n{self.path=}|\n{self.options=}"
+    
 
 class Group:
     
@@ -61,17 +65,17 @@ class ParsedInputAnswer:
         self.option:str|None = parsed_dict.get("option")
         
         self.context_path = context_path
-        self.ielement:IElement = None if int(self.id) < len(ielements) else ielements[int(self.id)]
+        self.ielement:IElement = ielements[int(self.id)] if int(self.id) < len(ielements) else NotImplementedError
         
     def is_answer_valid(self)->bool:
-        if not self.ielement:        
+        if not self.ielement:
             return False
         if self.ielement.action_type == ActionType.select:
-            return self.id
+            return self.id!=None
         if self.ielement.action_type == ActionType.field:
-            return self.id and self.answer
+            return self.id!=None and self.answer!=None
         if self.ielement.action_type == ActionType.dropdown:
-            if not (self.id and self.option):
+            if not (self.id!=None and self.option!=None):
                 return False
             if not self.ielement.options:
                 return False
@@ -97,7 +101,7 @@ class ParsedInputAnswer:
         return r
     
     def __repr__(self):
-        return f"{self.id=}|{self.answer=}|{self.option=}| has ielement {self.ielement!=None}| {self.context_path=}"
+        return f"\n{self.id=}|\n{self.answer=}|\n{self.option=}|\n{self.ielement=}|\n{self.context_path=}"
     
   
     

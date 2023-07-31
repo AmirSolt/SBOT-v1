@@ -13,19 +13,25 @@ class State:
         self.browser = browser
     
     def is_page(self, browser_url, dest_url):
-        return yarl.URL(browser_url) == yarl.URL(dest_url)
+        url1 = yarl.URL(browser_url)
+        url2 = yarl.URL(dest_url)
+        return url1.host+url1.path==url2.host+url2.path
 
     def get_whale_survey_url(self, )->str:
-        whale_url = ""
-        boxes = self.browser.get_elements(self.browser, '.survey-v2-group a', "")
-        for box in boxes:
+        
+        def get_ppm_number(box)->int:
             ppm = self.browser.get_elements(box, ".survey-v2-points-ppm", "")[0]
             number = re.findall(r'\d+', ppm.text)[0]
-            if config.WHALE_SURVEY_LIMIT >= int(number):
-                whale_url = box.get_attribute("href")
-                return whale_url
+            return int(number)
         
-        return whale_url
+        boxes = self.browser.get_elements(self.browser, '.survey-v2-group a', "")
+        numbers = [get_ppm_number(box) for box in boxes]
+        if not numbers:
+            return ""
+        whale_index = numbers.index(max(numbers))
+        if config.WHALE_SURVEY_LIMIT <= numbers[whale_index]:
+            return boxes[whale_index].get_attribute("href")
+        return ""
 
     def is_group_solvable(self, group:Group):
         if group.is_media_group:

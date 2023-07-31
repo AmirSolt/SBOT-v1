@@ -27,5 +27,5 @@ CHROME_WELCOME_URL = "chrome://welcome/"
 LOGIN_URL = "https://www.surveyjunkie.com/?login"
 MENU_URL = "https://www.surveyjunkie.com/member"
 
-WHALE_SURVEY_LIMIT = 10
+WHALE_SURVEY_LIMIT = 1
 CHAT_TEMPERATURE = 0.3

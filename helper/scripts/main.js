@@ -113,11 +113,12 @@ function getDirectText(el) {
 }
 
 
-class ActionType {
-    field = "field"
-    select = "select"
-    dropdown = "dropdown"
+const ActionType = {
+    field : "field",
+    select : "select",
+    dropdown : "dropdown",
 }
+
 class Vis {
     static isSpatial(style, rect) {
         if (!(rect.w > 0 && rect.h > 0)) { return false }
