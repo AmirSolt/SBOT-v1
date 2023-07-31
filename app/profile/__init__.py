@@ -64,15 +64,17 @@ class Profile:
         
 
     def print_info(self):
-        print(f"Email: {self.__get_memory_by_question('email')}")
-        print(f"Password: {self.__get_memory_by_question('password')}")
-        print(f"first name: {self.__get_memory_by_question('first name')}")
-        print(f"last name: {self.__get_memory_by_question('last name')}")
-        print(f"postal code: {self.__get_memory_by_question('postal code')}")
-        print(f"birth day: {self.__get_memory_by_question('birth day')}")
-        print(f"birth month: {self.__get_memory_by_question('birth month')}")
-        print(f"birth year: {self.__get_memory_by_question('birth year')}")
-        print(f"gender: {self.__get_memory_by_question('gender')}")
+        print("********************************************")
+        print(f"Email: {self.get_memory_by_question('email')}")
+        print(f"Password: {self.get_memory_by_question('password')}")
+        print(f"first name: {self.get_memory_by_question('first name')}")
+        print(f"last name: {self.get_memory_by_question('last name')}")
+        print(f"postal code: {self.get_memory_by_question('postal code')}")
+        print(f"birth day: {self.get_memory_by_question('birth day')}")
+        print(f"birth month: {self.get_memory_by_question('birth month')}")
+        print(f"birth year: {self.get_memory_by_question('birth year')}")
+        print(f"gender: {self.get_memory_by_question('gender')}")
+        print("********************************************")
         
         
     def get_context(self, text:str)->str|None:
@@ -120,6 +122,13 @@ class Profile:
     def reset_survey_memory(self):
         self.survey_memory = {}
         
+        
+    def get_memory_by_question(self, question):
+        items = [item["answer"] for item in self.perm_memory if item["question"] == question]
+        if not items:
+            return None
+        return items[0]
+        
 
     def __load_perm_memory(self):
         profile_seed = utils.read_file(self.profile_seed_path)
@@ -139,11 +148,7 @@ class Profile:
     def __embed_memory_item(self, question:str, answer:str):
         return AI.embed_str(f"{question} {answer}")
     
-    def __get_memory_by_question(self, question):
-        items = [item["answer"] for item in self.perm_memory if item["question"] == question]
-        if not items:
-            return None
-        return items[0]
+
 
     def kill(self):
         utils.write_file(self.perm_memory_path, self.perm_memory)

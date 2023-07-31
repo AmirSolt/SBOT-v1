@@ -19,18 +19,20 @@ def pause():
     else:
         pause_duration = short_pause * (0.5 + random.random()) 
 
-    print(f"waiting for {int(pause_duration)}s")
+    print(f"pause: {int(pause_duration)}s")
 
     time.sleep(pause_duration)
 
 
-
-
+def action_pause():
+    pause_duration = 2
+    print(f"action pause: {pause_duration}s")
+    time.sleep(pause_duration)
 
 def test_pause():
 
     pause_duration = 0.2
 
-    print(f"TEST PAUSE waiting for {pause_duration}s")
+    print(f"TEST PAUSE: {pause_duration}s")
 
     time.sleep(pause_duration)

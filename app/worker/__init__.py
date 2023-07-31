@@ -28,7 +28,7 @@ class Worker:
         
         self.browser = Browser(self.worker_id, headless=False, use_subprocess=True)
         self.profile = Profile(self.worker_id)
-        self.actor = Actor(self.browser)
+        self.actor = Actor(self.browser, self.profile)
         self.state = State(self.browser)
 
         self.last_group_ids = []
@@ -67,6 +67,7 @@ class Worker:
             return True
         
         if self.state.is_page(browser_url, config.MENU_URL):
+            self.profile.reset_survey_memory()
             self.browser.refresh()
             whale_url = self.state.get_whale_survey_url()
             if whale_url:

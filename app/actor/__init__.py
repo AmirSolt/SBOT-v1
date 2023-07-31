@@ -1,25 +1,31 @@
 
 from app.browser import Browser
+from app.profile import Profile
 from d_types import ParsedInputAnswer, ActionType
-from funcs import AI
-
+from funcs import AI, pauser
 
 
 
 class Actor:
     
-    def __init__(self, browser:Browser) -> None:
+    def __init__(self, browser:Browser, profile:Profile) -> None:
         self.browser=browser
+        self.profile=profile
     
     def help(self, reason):
         print("===== HELP =====")
         print(f"===== {reason} =====")
-        print("==========")
+        self.profile.print_info()
         input("===== continue? =====")
         
     def login_survey_junkie(self):
         print("logging in ....")
-        pass
+        email = self.profile.get_memory_by_question('email')
+        password = self.profile.get_memory_by_question('password')
+        self.browser.fill_field(".login-popup input[type=email]", "", email)
+        self.browser.fill_field(".login-popup input[type=password]", "", password)
+        self.browser.click_element(".login-popup button", "")
+        
 
     def solve_input_answer(self, parsed_input_answer:ParsedInputAnswer):
         
@@ -34,16 +40,20 @@ class Actor:
 
     def solve_field(self, element_path:str, answer:str, context_path:str):
         self.browser.fill_field(element_path, context_path, answer)
-        pass
+        pauser.action_pause()
+        
 
     def solve_select_type(self, element_path:str, context_path:str):
         self.browser.click_element(element_path, context_path)
+        pauser.action_pause()
 
     def solve_dropdown(self, element_path:str, chosen_option:str, options:list[str], context_path:str):
         index = AI.get_highest_fuzzy_match_index(chosen_option, options)
         self.browser.choose_option(element_path, context_path, index)
+        pauser.action_pause()
     
 
     
     def go_to(self, url):
         self.browser.get(url)
+        pauser.action_pause()

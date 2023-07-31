@@ -24,7 +24,7 @@ PROFILE_SURVEY_MEM_FILE = PROFILE_MEMORY_DIR + "survey_memory.json" # .GITIGNORE
 SCRIPT_MAIN_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/main.js"
 
 CHROME_WELCOME_URL = "chrome://welcome/"
-LOGIN_URL = "https://www.surveyjunkie.com/"
+LOGIN_URL = "https://www.surveyjunkie.com/?login"
 MENU_URL = "https://www.surveyjunkie.com/member"
 
 WHALE_SURVEY_LIMIT = 10
