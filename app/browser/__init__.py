@@ -98,21 +98,22 @@ class Browser(uc.Chrome):
         
         return True
     
-    
-    def get_elements(self, selector_path:str, iframe_path:str)->list[WebElement]:
+    def get_elements(self, parent, selector_path:str, iframe_path:str)->list[WebElement]:
         
         self.context_switch(iframe_path)
             
         elements = []  
         try:
-            elements = self.find_elements(By.CSS_SELECTOR, selector_path)
+            elements = parent.find_elements(By.CSS_SELECTOR, selector_path)
         except NoSuchElementException:
             elements = []
 
         self.context_switch("")
         
         return elements
-    
+
+
+
 
     def context_switch(self, iframe_path):
         if iframe_path:

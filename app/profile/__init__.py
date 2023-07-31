@@ -39,8 +39,7 @@ class Profile:
         else:
             raise Exception("Perm memory is empty")
         
-        print(f"Email: {self.__get_memory_by_question('email')}")
-        print(f"Password: {self.__get_memory_by_question('password')}")
+
             
         
 
@@ -61,18 +60,20 @@ class Profile:
             else:
                 raise Exception(f"======= Profile info does not exist path: {self.profile_seed_path}")
             
+        self.print_info()
         
 
-    # def get_parsed_group_context(self, parsed_group)->str:
-    #     context = []
+    def print_info(self):
+        print(f"Email: {self.__get_memory_by_question('email')}")
+        print(f"Password: {self.__get_memory_by_question('password')}")
+        print(f"first name: {self.__get_memory_by_question('first name')}")
+        print(f"last name: {self.__get_memory_by_question('last name')}")
+        print(f"postal code: {self.__get_memory_by_question('postal code')}")
+        print(f"birth day: {self.__get_memory_by_question('birth day')}")
+        print(f"birth month: {self.__get_memory_by_question('birth month')}")
+        print(f"birth year: {self.__get_memory_by_question('birth year')}")
+        print(f"gender: {self.__get_memory_by_question('gender')}")
         
-    #     for ielement in parsed_group["ielements"]:
-    #         text = parsed_group["instructions"]
-    #         text += "" if not ielement["label"] else " " + ielement["label"]
-            
-    #         context.extend(self.get_contexts(text))
-            
-    #     return "\n".join(context)
         
     def get_context(self, text:str)->str|None:
         contexts = self.get_all_contexts(text)[:COUNT_RETURNED_MEMORY]

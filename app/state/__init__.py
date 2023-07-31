@@ -3,7 +3,7 @@ from ..browser import Browser
 from d_types import ParsedInputAnswer, Group, IElement, ActionType
 from helper import config
 import re
-
+import yarl
 
 
 
@@ -13,14 +13,14 @@ class State:
         self.browser = browser
     
     def is_page(self, browser_url, dest_url):
-        return browser_url == dest_url
+        return yarl.URL(browser_url) == yarl.URL(dest_url)
 
     def get_whale_survey_url(self, )->str:
         whale_url = ""
-        boxes = self.browser.get_elements('.survey-v2-group a', "")
+        boxes = self.browser.get_elements(self.browser, '.survey-v2-group a', "")
         for box in boxes:
-            ppm = box.find_element(".survey-v2-points-ppm", "")
-            number = re.findall(r'\d+', ppm.text)
+            ppm = self.browser.get_elements(box, ".survey-v2-points-ppm", "")[0]
+            number = re.findall(r'\d+', ppm.text)[0]
             if config.WHALE_SURVEY_LIMIT >= int(number):
                 whale_url = box.get_attribute("href")
                 return whale_url

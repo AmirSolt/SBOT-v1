@@ -96,6 +96,11 @@ class ParsedInputAnswer:
             
         return r
     
+    def __repr__(self):
+        return f"{self.id=} {self.answer=} {self.option=}"
+    
+  
+    
     
 def get_parsed_input_answers(group:Group, raw_answer:str)->list[ParsedInputAnswer]:
     if not raw_answer:

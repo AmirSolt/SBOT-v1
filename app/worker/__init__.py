@@ -67,6 +67,7 @@ class Worker:
             return True
         
         if self.state.is_page(browser_url, config.MENU_URL):
+            self.browser.refresh()
             whale_url = self.state.get_whale_survey_url()
             if whale_url:
                 self.actor.go_to(whale_url)
@@ -107,7 +108,7 @@ class Worker:
         
         for parsed_input_answer in parsed_input_answers:
             if not self.state.is_ai_answer_valid(parsed_input_answer):
-                print(parsed_input_answers)
+                print("parsed_input_answer:",parsed_input_answer)
                 self.actor.help("AI answer is not valid")
             else:
                 self.actor.solve_input_answer(parsed_input_answer)
