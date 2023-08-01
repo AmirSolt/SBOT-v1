@@ -13,10 +13,9 @@ load_dotenv()
 
 
 CHAT_INSTRUCTIONS = """Role play as {name}. 
-You are given a survey question and are required to answer it.
+if you are aksed a question about you, use the information given to answer.
 To answer the question pay attention to [input:... id:...].
-Answer one or many inputs if needed. include input's id in your response.
-If there are multiple choice and you are not confident you can just pick any.
+if there's an input similar to "continue" or "next" only choose that.
 You can only respond in the following formats for each input. 
 if input type is Submit, only respond with "id"
 if input type is Select, only respond with "id"
@@ -27,7 +26,7 @@ id:x
 id:x answer:...
 id:x option:...
 
-some information about {name}:
+some information about you:
 {context}
 """
 

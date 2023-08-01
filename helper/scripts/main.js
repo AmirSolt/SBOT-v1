@@ -99,7 +99,7 @@ function cleanText(text) {
     return text.replace(/\s+/g, ' ').trim();
 }
 function getAllText(element) {
-    const text = element.textContent || element.innerText || '';
+    const text =  element.innerText || '';
     return cleanText(text)
 }
 function getDirectText(el) {
@@ -558,7 +558,7 @@ function getTopGroups(floorInfo) {
             this.labelName = "Submit"
             this.verboseName = "Submit"
             this.color = "cyan"
-            this.text = getDirectText(element) || element.getAttribute("value")
+            this.text = getDirectText(element) || getAllText(element) || element.getAttribute("value")
             this.actionType = ActionType.select
         }
         static isType(element) {
@@ -661,7 +661,7 @@ function getTopGroups(floorInfo) {
         }
         getDict() {
             return {
-                type: this.verboseName,
+                action_type: this.actionType,
                 path: this.getPath(),
                 options: this.options
             }
@@ -861,6 +861,7 @@ function getTopGroups(floorInfo) {
         // let rightSide = page.w - leftSide;
         let bottomSide = page.h - topSide;
         return (
+            !group.segments.length == 1 &&
             !group.segments.some(segment=> segment instanceof ISubmit) &&
             (
                 group.rect.w < FLOOR_EDGE*FLOOR_MUTL ||
@@ -976,7 +977,7 @@ const minImageSize = 5;
 const FLOOR_EDGE = 18
 const FLOOR_MUTL = 4
 
-document.body.style.zoom='25%'
+// document.body.style.zoom='25%'
 
 const page = new Rect(window.scrollX, window.scrollY, document.body.clientWidth, document.body.clientHeight)
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -993,5 +994,5 @@ const msResult = msGroups
 
 console.log("result:", msResult)
 
-document.body.style.zoom='100%'
+// document.body.style.zoom='100%'
 

@@ -18,7 +18,6 @@ class State:
         return url1.host+url1.path==url2.host+url2.path
 
     def get_whale_survey_url(self, )->str:
-        
         def get_ppm_number(box)->int:
             ppm = self.browser.get_elements(box, ".survey-v2-points-ppm", "")[0]
             number = re.findall(r'\d+', ppm.text)[0]

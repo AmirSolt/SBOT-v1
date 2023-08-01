@@ -67,17 +67,22 @@ class Worker:
             return True
         
         if self.state.is_page(browser_url, config.MENU_URL):
-            self.profile.reset_survey_memory()
-            # self.browser.refresh()
-            # pauser.test_pause()
-            whale_url = self.state.get_whale_survey_url()
-            if whale_url:
-                self.actor.go_to(whale_url)
+            try:
+                self.profile.reset_survey_memory()
+                self.actor.go_to(config.MENU_URL)
                 pauser.test_pause()
+                whale_url = self.state.get_whale_survey_url()
+                if whale_url:
+                    self.actor.go_to(whale_url)
+                    pauser.test_pause()
+                    return True
+                else:
+                    print(">> No whale found exiting..")
+                    return False
+            except Exception:
+                # add to tries
+                self.actor.help("Can't go to survey")
                 return True
-            else:
-                print(">> No whale found exiting..")
-                return False
         
         # if url changes reset group ids in memory
         if browser_url != self.last_url:
