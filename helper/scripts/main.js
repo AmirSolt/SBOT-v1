@@ -237,6 +237,14 @@ class Rect {
 
         return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
+    static isContaining(parentRect, childRect){
+        return (
+            (parentRect.x <= childRect.x) &&
+            (parentRect.y <= childRect.y) &&
+            (parentRect.y + parentRect.h >= childRect.y+parentRect.h) &&
+            (parentRect.x + parentRect.w >= childRect.x+parentRect.w) 
+        )
+    }
 }
 class FloorInfo {
 
@@ -407,6 +415,8 @@ function getTopGroups(floorInfo) {
             const rect = Rect.elementToRect(el)
             const style = window.getComputedStyle(el);
             if (!Vis.isSpatial(style, rect))
+                return false
+            if(!isContaining(page, rect))
                 return false
             if (Vis.isLowVis(style))
                 return false
@@ -979,7 +989,7 @@ const FLOOR_MUTL = 4
 
 // document.body.style.zoom='25%'
 
-const page = new Rect(window.scrollX, window.scrollY, document.body.clientWidth, document.body.clientHeight)
+const page = new Rect(0, 0, document.body.clientWidth, document.body.clientHeight)
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
 console.log("page:", page)
