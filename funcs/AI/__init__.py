@@ -12,7 +12,12 @@ load_dotenv()
 # import torch
 
 
-CHAT_INSTRUCTIONS = """Role play as {name}. You are given a survey question and are required to answer it. To answer the question pay attention to [input:... id:...]. Answer one or many inputs if needed. include input's id in your response. If there are multiple choice and you are not confident you can just pick any. You can only respond in the following formats for each input. 
+CHAT_INSTRUCTIONS = """Role play as {name}. 
+You are given a survey question and are required to answer it.
+To answer the question pay attention to [input:... id:...].
+Answer one or many inputs if needed. include input's id in your response.
+If there are multiple choice and you are not confident you can just pick any.
+You can only respond in the following formats for each input. 
 if input type is Submit, only respond with "id"
 if input type is Select, only respond with "id"
 if input type is Field, respond with "id" and "answer"

@@ -29,7 +29,7 @@ class State:
         if not numbers:
             return ""
         whale_index = numbers.index(max(numbers))
-        print(f"=> whale: {numbers[whale_index]}")
+        print(f"=> whale: {numbers[whale_index]} ppm")
         if config.WHALE_SURVEY_LIMIT <= numbers[whale_index]:
             return boxes[whale_index].get_attribute("href")
         return ""

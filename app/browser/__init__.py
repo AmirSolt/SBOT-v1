@@ -63,7 +63,7 @@ class Browser(uc.Chrome):
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
-            self.scroll_to_element(element)
+            # self.scroll_to_element(element)
             Select(element).select_by_index(index)
         except NoSuchElementException:
             print(f">> Can't find element path: {selector_path}")
@@ -82,7 +82,7 @@ class Browser(uc.Chrome):
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
-            self.scroll_to_element(element)
+            # self.scroll_to_element(element)
             element.send_keys(text)
         except NoSuchElementException:
             print(f">> Can't find element path: {selector_path}")
@@ -98,7 +98,7 @@ class Browser(uc.Chrome):
         self.context_switch(iframe_path)
         try:
             element = self.find_element(By.CSS_SELECTOR, selector_path)
-            self.scroll_to_element(element)
+            # self.scroll_to_element(element)
             element.click()
         except NoSuchElementException:
             print(f">> Can't find element path: {selector_path}")

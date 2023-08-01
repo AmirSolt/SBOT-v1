@@ -31,6 +31,7 @@ class Worker:
         self.actor = Actor(self.browser, self.profile)
         self.state = State(self.browser)
 
+        self.last_url = ""
         self.last_group_ids = []
     
     def __filter_parsed_groups(self, groups:list[Group])->Group|None:
@@ -55,7 +56,6 @@ class Worker:
         vacuum.clean_old_files(self.worker_id)
         pauser.test_pause()
         
-        
         browser_url = self.browser.current_url
         print("browser_url",browser_url)
         if self.state.is_page(browser_url, config.CHROME_WELCOME_URL):
@@ -68,7 +68,8 @@ class Worker:
         
         if self.state.is_page(browser_url, config.MENU_URL):
             self.profile.reset_survey_memory()
-            self.browser.refresh()
+            # self.browser.refresh()
+            # pauser.test_pause()
             whale_url = self.state.get_whale_survey_url()
             if whale_url:
                 self.actor.go_to(whale_url)
@@ -77,10 +78,12 @@ class Worker:
             else:
                 print(">> No whale found exiting..")
                 return False
+        
+        # if url changes reset group ids in memory
+        if browser_url != self.last_url:
+            self.last_group_ids = []
             
-        
-        
-        
+        self.last_url = browser_url
         parsed_groups = self.browser.get_parsed_groups()
         groups = [convert_to_group(p) for p in parsed_groups]
         group = self.__filter_parsed_groups(groups)

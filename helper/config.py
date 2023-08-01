@@ -29,4 +29,4 @@ LOGIN_URL = "https://www.surveyjunkie.com/?login"
 MENU_URL = "https://www.surveyjunkie.com/member"
 
 WHALE_SURVEY_LIMIT = 0
-CHAT_TEMPERATURE = 0.5
+CHAT_TEMPERATURE = 0.8
