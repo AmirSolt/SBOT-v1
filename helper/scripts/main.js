@@ -330,6 +330,28 @@ class FloorInfo {
     }
 }
 
+class Action{
+    constructor(actionType, path, optionIndex){
+        this.actionType = actionType
+        this.path = path
+        this.optionIndex = optionIndex
+    }
+}
+class Chain{
+    constructor(text, actions){
+        this.text = text
+        this.actions = actions
+    }
+}
+class Cable{
+    constructor(chains, isComparable){
+        this.chains = chains
+        this.isComparable = isComparable
+        
+    }
+}
+
+
 
 function getFloorInfo() {
 
@@ -404,7 +426,8 @@ function getTopGroups(floorInfo) {
             this.verboseName = ""
             this.color = "white"
             this.rect = Rect.elementToRect(element)
-            this.group = null
+            this.cluster = null
+            this.path = this.getPath()
         }
         static toAvoid(el){
             return (
@@ -434,8 +457,8 @@ function getTopGroups(floorInfo) {
                 ) 
             )
         }
-        setGroup(group) {
-            this.group = group
+        setCluster(cluster) {
+            this.cluster = cluster
         }
         getChatVerbose() {
             throw new Error('==== Abstract class ====');
@@ -449,9 +472,9 @@ function getTopGroups(floorInfo) {
         static getSegment(el) {
             let segment = IElement.getIElement(el);
             if (segment == null)
-                segment = TextElement.getTextElement(el)
-            if (segment == null)
                 segment = MediaElement.getMediaElement(el)
+            if (segment == null)
+                segment = TextElement.getTextElement(el)
             if (segment == null || segment.rect == null)
                 return null
             return segment
@@ -463,7 +486,7 @@ function getTopGroups(floorInfo) {
             this.labelName = "Text"
             this.verboseName = "Text"
             this.color = "green"
-            this.text = getDirectText(element)
+            this.text = getDirectText(element) || ""
         }
         static isType(element) {
             if (getDirectText(element))
@@ -481,33 +504,6 @@ function getTopGroups(floorInfo) {
                 return new TextElement(el)
             }
             return null
-        }
-    }
-    class IElement extends Segment {
-        constructor(element) {
-            super(element);
-            this.color = "blue"
-            this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
-            this.actionType = ""
-        }
-        getChatVerbose() {
-            let text = ` [input:${this.verboseName} id:${this.group.getIElementIndex(this)}] ${this.text}`
-            return text.trim()
-        }
-        getSearchVerbose() {
-            return this.text
-        }
-        getDict() {
-            return {
-                action_type: this.actionType,
-                path: this.getPath(),
-            }
-        }
-        static getIElement(el) {
-            const IElementClass = IElementClasses.find(IElementClass => IElementClass.isType(el))
-            if (!IElementClass)
-                return null
-            return new IElementClass(el);
         }
     }
     class MediaElement extends Segment {
@@ -561,31 +557,35 @@ function getTopGroups(floorInfo) {
         }
 
     }
-
-    class ISubmit extends IElement {
+    class IElement extends Segment {
         constructor(element) {
             super(element);
-            this.labelName = "Submit"
-            this.verboseName = "Submit"
-            this.color = "cyan"
-            this.text = getDirectText(element) || getAllText(element) || element.getAttribute("value")
-            this.actionType = ActionType.select
+            this.color = "blue"
+            this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
+            this.chains = null
         }
-        static isType(element) {
-            if (
-                (
-                    getElementTagname(element) == "input" &&
-                    element.getAttribute("type") == "submit"
-                ) ||
-                (
-                    getElementTagname(element) == "button" &&
-                    element.getAttribute("type") == "submit"
-                )
-
-            ) return true
-            return false
+        getChatVerbose() {
+            let text = ` [input:${this.verboseName} id:${this.group.getIElementIndex(this)}] ${this.text}`
+            return text.trim()
+        }
+        getSearchVerbose() {
+            return this.text
+        }
+        getDict() {
+            return {
+                action_type: this.actionType,
+                path: this.path,
+            }
+        }
+        static getIElement(el) {
+            const IElementClass = IElementClasses.find(IElementClass => IElementClass.isType(el))
+            if (!IElementClass)
+                return null
+            return new IElementClass(el);
         }
     }
+
+
     class ISelect extends IElement {
         constructor(element) {
             super(element);
@@ -593,7 +593,8 @@ function getTopGroups(floorInfo) {
             this.verboseName = "Select"
             this.color = "red"
             this.text = getAllText(element) || getDirectText(element) || ""
-            this.actionType = ActionType.select
+            this.chains = [Chain(this.text, 
+                [Action(ActionType.select, this.path, null)])]
         }
         static isType(element) {
             if (
@@ -612,9 +613,9 @@ function getTopGroups(floorInfo) {
             const style = window.getComputedStyle(el);
             const tagName = getElementTagname(el);
             return (
-                tagName != "input" &&
-                tagName != "button" &&
-                tagName != "select" &&
+                // tagName != "input" &&
+                // tagName != "button" &&
+                // tagName != "select" &&
                 !Segment.isLink(el) &&
                 style.cursor === 'pointer'
             )
@@ -625,7 +626,8 @@ function getTopGroups(floorInfo) {
             super(element);
             this.labelName = "Field"
             this.verboseName = "Field"
-            this.actionType = ActionType.field
+            this.chains = [Chain(null, 
+                [Action(ActionType.field, this.path, null)])]
         }
         static isType(element) {
             if (
@@ -655,7 +657,10 @@ function getTopGroups(floorInfo) {
             this.verboseName = "Dropdown"
             this.options = this.getOptions()
             this.text = this.options[0] || ""
-            this.actionType = ActionType.dropdown
+            this.chains = this.getChains()
+        }
+        getChains(){
+            return this.options.map((option,i)=>Chain(option, [Action(ActionType.dropdown, this.path, i)]))
         }
         static isType(element) {
             if (
@@ -672,7 +677,7 @@ function getTopGroups(floorInfo) {
         getDict() {
             return {
                 action_type: this.actionType,
-                path: this.getPath(),
+                path: this.path,
                 options: this.options
             }
         }
@@ -691,6 +696,52 @@ function getTopGroups(floorInfo) {
             })
             return text
         }
+    }
+    class CustomDropdown extends IElement{
+        constructor(el){
+            super(element);
+            this.labelName = "Custom Dropdown"
+            this.verboseName = "Custom Dropdown"
+            this.color = "red"
+            this.options = []
+            this.optionPaths = []
+            this.chains = this.getChains()
+        }
+        getChains(){
+            return this.options.map((option,i)=>Chain(option, [
+                Action(ActionType.select, this.path, null),
+                Action(ActionType.select, this.optionPaths[i], null),
+            ]))
+        }
+        static isType(element) {
+            if (
+                ISelect.isInteractable(element) &&
+                CustomDropdown.hasChildrenOptionsList(element)
+            ) return true
+            return false
+        }
+        static hasChildrenOptionsList(element){
+
+        }
+    }
+
+    class Cluster{
+
+    }
+    class FieldICluster extends Cluster{
+        
+    }
+    class ListCluster extends Cluster{
+
+    }
+    class InlineCluster extends Cluster{
+
+    }
+    class GridCluster extends Cluster{
+
+    }
+    class SubmitCluster extends Cluster{
+
     }
 
     class Group {
@@ -814,7 +865,8 @@ function getTopGroups(floorInfo) {
                 "chat_verbose": this.getChatVerbose(),
                 "search_verbose": this.getSearchVerbose(),
                 "is_media_group": this.isMediaGroup(),
-                "ielements": this.getIElementsDict(),
+                "instruction":null,
+                "cables":null,
             }
         }
     }
@@ -950,7 +1002,7 @@ function getTopGroups(floorInfo) {
     }
 
     // ====================== EXE ==========================
-    const IElementClasses = [IField, ISubmit, ISelect, IDropdown]
+    const IElementClasses = [IField, IDropdown, CustomDropdown, ISelect]
     const context = floorInfo.context;
     const contextPath = floorInfo.contextPath;
 

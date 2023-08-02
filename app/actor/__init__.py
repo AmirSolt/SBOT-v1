@@ -29,15 +29,17 @@ class Actor:
 
     def solve_input_answer(self, group_answer:GroupAnswer):
         
-        for iaction in group_answer.iactions:
+        for chain in group_answer.chains:
+            
+            for action in chain.actions:
         
-            match iaction.action_type:
-                case ActionType.field:
-                    self.solve_field(iaction.path, iaction.answer, iaction.context_path)
-                case ActionType.select:
-                    self.solve_select_type(iaction.path, iaction.context_path)
-                case ActionType.dropdown:
-                    self.solve_dropdown_by_index(iaction.path, iaction.option_index, iaction.context_path)
+                match action.action_type:
+                    case ActionType.field:
+                        self.solve_field(action.path, chain.answer, group_answer.group.context_path)
+                    case ActionType.select:
+                        self.solve_select_type(action.path, group_answer.group.context_path)
+                    case ActionType.dropdown:
+                        self.solve_dropdown_by_index(action.path, action.option_index, group_answer.group.context_path)
 
 
     def solve_field(self, element_path:str, answer:str, context_path:str):
