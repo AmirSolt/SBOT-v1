@@ -562,7 +562,9 @@ function getTopGroups(floorInfo) {
             super(element);
             this.color = "blue"
             this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
-            this.chains = null
+        }
+        getAction( option_index){
+            throw new Error('==== Abstract class ====');
         }
         getChatVerbose() {
             let text = ` [input:${this.verboseName} id:${this.group.getIElementIndex(this)}] ${this.text}`
@@ -593,8 +595,9 @@ function getTopGroups(floorInfo) {
             this.verboseName = "Select"
             this.color = "red"
             this.text = getAllText(element) || getDirectText(element) || ""
-            this.chains = [Chain(this.text, 
-                [Action(ActionType.select, this.path, null)])]
+        }
+        getAction( option_index){
+            return Action(ActionType.select, this.path, null)
         }
         static isType(element) {
             if (
@@ -626,8 +629,9 @@ function getTopGroups(floorInfo) {
             super(element);
             this.labelName = "Field"
             this.verboseName = "Field"
-            this.chains = [Chain(null, 
-                [Action(ActionType.field, this.path, null)])]
+        }
+        getAction(option_index){
+            return Action(ActionType.field, this.path, null)
         }
         static isType(element) {
             if (
@@ -657,10 +661,9 @@ function getTopGroups(floorInfo) {
             this.verboseName = "Dropdown"
             this.options = this.getOptions()
             this.text = this.options[0] || ""
-            this.chains = this.getChains()
         }
-        getChains(){
-            return this.options.map((option,i)=>Chain(option, [Action(ActionType.dropdown, this.path, i)]))
+        getAction(option_index){
+            return Action(ActionType.dropdown, this.path, option_index)
         }
         static isType(element) {
             if (
@@ -697,39 +700,20 @@ function getTopGroups(floorInfo) {
             return text
         }
     }
-    class CustomDropdown extends IElement{
-        constructor(el){
-            super(element);
-            this.labelName = "Custom Dropdown"
-            this.verboseName = "Custom Dropdown"
-            this.color = "red"
-            this.options = []
-            this.optionPaths = []
-            this.chains = this.getChains()
-        }
-        getChains(){
-            return this.options.map((option,i)=>Chain(option, [
-                Action(ActionType.select, this.path, null),
-                Action(ActionType.select, this.optionPaths[i], null),
-            ]))
-        }
-        static isType(element) {
-            if (
-                ISelect.isInteractable(element) &&
-                CustomDropdown.hasChildrenOptionsList(element)
-            ) return true
-            return false
-        }
-        static hasChildrenOptionsList(element){
 
-        }
-    }
 
     class Cluster{
+        constructor(){
+            this.instruction = null
+            this.ielements = []
+            this.imedias = []
+        }
+        static isType(){
 
-    }
-    class FieldICluster extends Cluster{
-        
+        }
+        isInstruction(){
+
+        }
     }
     class ListCluster extends Cluster{
 
@@ -740,8 +724,14 @@ function getTopGroups(floorInfo) {
     class GridCluster extends Cluster{
 
     }
-    class SubmitCluster extends Cluster{
+    class DropdownCluster extends Cluster{
 
+    }
+    class FieldICluster extends Cluster{
+        
+    }
+    class SubmitCluster extends Cluster{
+        
     }
 
     class Group {
@@ -887,101 +877,95 @@ function getTopGroups(floorInfo) {
             }
         });
     }
-    // ====================== Floor Segments ==========================
-
+    // ====================== Segments ==========================
     function getSegments(context) {
+        function traverseChildren(element, segments) {
+            if (Segment.isType(element)) {
+                if(Segment.toAvoid(element)){
+                    return segments
+                }
+                let segment = Segment.getSegment(element);
+                if (segment) {
+                    segments.push(segment);
+                    if(segment instanceof IElement)
+                        return segments
+                }
+            }
+            for (let i = 0; i < element.children.length; i++) {
+                segments = traverseChildren(element.children[i], segments);
+            }
+            return segments;
+        }
         let segments = [];
         segments = traverseChildren(context.body, segments);
         return segments
     }
-
-    function traverseChildren(element, segments) {
-        if (Segment.isType(element)) {
-            if(Segment.toAvoid(element)){
-                return segments
-            }
-            let segment = Segment.getSegment(element);
-            if (segment) {
-                segments.push(segment);
-                if(segment instanceof IElement)
-                    return segments
-            }
-        }
-        for (let i = 0; i < element.children.length; i++) {
-            segments = traverseChildren(element.children[i], segments);
-        }
-        return segments;
-    }
-
-
+    // ====================== Clustering ==========================
 
     // ====================== Grouping ==========================
-
-    function isRectOnEdge(group) {
-        // let leftSide = FLOOR_EDGE * unit;
-        let topSide = FLOOR_EDGE * unit;
-        // let rightSide = page.w - leftSide;
-        let bottomSide = page.h - topSide;
-        return (
-            !group.segments.length == 1 &&
-            !group.segments.some(segment=> segment instanceof ISubmit) &&
-            (
-                group.rect.w < FLOOR_EDGE*FLOOR_MUTL ||
-                group.rect.h < FLOOR_EDGE*FLOOR_MUTL 
-            ) &&
-            (
-                group.rect.cy > bottomSide ||
-                group.rect.cy < topSide
-            )
-            ) 
-    
-    }
-    function getLvl1Grouping(ielements, segments) {
-        let groups = []
-        ielements.forEach(ielement => {
-            if (ielement.group == null) {
-                const group = new Group(ielement)
-                ielement.setGroup(group)
-                groups.push(group)
-                if (group.isSoloGroup(ielement))
-                    return
-                segments.forEach(segment => {
-                    if (segment.group != null)
-                        return
-                    if (ielement.group.isGroup(segment)) {
-                        ielement.group.addToGroup(segment)
-                        segment.setGroup(ielement.group)
-                    }
-                });
-            }
-        });
-        return groups;
-    }
-    function getLvl2Grouping(groups, textElements) {
-        groups.forEach(group => {
-            const instructionIndex = textElements.findIndex(textElement => group.isInstruction(textElement))
-            if (instructionIndex == -1)
-                return
-            group.addToGroup(textElements[instructionIndex])
-            textElements.splice(instructionIndex, 1)
-        });
-    }
-    function removeEdgeGroups(groups) {
-        return groups.filter(group => {
-            return !isRectOnEdge(group);
-        })
-    }
-    function sortGroups(groups) {
-        return groups.sort((a, b) => {
-            const con = a.rect.y - b.rect.y
-            if (con === 0)
-                return b.rect.x - a.rect.x
-            return con
-        })
-    }
-
-
     function getGroups(segments) {
+        function isRectOnEdge(group) {
+            // let leftSide = FLOOR_EDGE * unit;
+            let topSide = FLOOR_EDGE * unit;
+            // let rightSide = page.w - leftSide;
+            let bottomSide = page.h - topSide;
+            return (
+                !group.segments.length == 1 &&
+                !group.segments.some(segment=> segment instanceof ISubmit) &&
+                (
+                    group.rect.w < FLOOR_EDGE*FLOOR_MUTL ||
+                    group.rect.h < FLOOR_EDGE*FLOOR_MUTL 
+                ) &&
+                (
+                    group.rect.cy > bottomSide ||
+                    group.rect.cy < topSide
+                )
+                ) 
+        
+        }
+        function getLvl1Grouping(ielements, segments) {
+            let groups = []
+            ielements.forEach(ielement => {
+                if (ielement.group == null) {
+                    const group = new Group(ielement)
+                    ielement.setGroup(group)
+                    groups.push(group)
+                    if (group.isSoloGroup(ielement))
+                        return
+                    segments.forEach(segment => {
+                        if (segment.group != null)
+                            return
+                        if (ielement.group.isGroup(segment)) {
+                            ielement.group.addToGroup(segment)
+                            segment.setGroup(ielement.group)
+                        }
+                    });
+                }
+            });
+            return groups;
+        }
+        function getLvl2Grouping(groups, textElements) {
+            groups.forEach(group => {
+                const instructionIndex = textElements.findIndex(textElement => group.isInstruction(textElement))
+                if (instructionIndex == -1)
+                    return
+                group.addToGroup(textElements[instructionIndex])
+                textElements.splice(instructionIndex, 1)
+            });
+        }
+        function removeEdgeGroups(groups) {
+            return groups.filter(group => {
+                return !isRectOnEdge(group);
+            })
+        }
+        function sortGroups(groups) {
+            return groups.sort((a, b) => {
+                const con = a.rect.y - b.rect.y
+                if (con === 0)
+                    return b.rect.x - a.rect.x
+                return con
+            })
+        }
         const ielements = segments.filter(element => element instanceof IElement);
         const textElements = segments.filter(element => element instanceof TextElement);
 
@@ -1000,7 +984,6 @@ function getTopGroups(floorInfo) {
 
         return groups
     }
-
     // ====================== EXE ==========================
     const IElementClasses = [IField, IDropdown, CustomDropdown, ISelect]
     const context = floorInfo.context;
