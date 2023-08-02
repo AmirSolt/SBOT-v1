@@ -714,6 +714,8 @@ function getTopGroups(floorInfo) {
         isInstruction(){
 
         }
+        static getCluster(target){
+        }
     }
     class ListCluster extends Cluster{
 
@@ -724,14 +726,16 @@ function getTopGroups(floorInfo) {
     class GridCluster extends Cluster{
 
     }
-    class DropdownCluster extends Cluster{
-
+    class OpenerCluster extends Cluster{
+        // has near by text
+        // is not submit
     }
     class FieldICluster extends Cluster{
         
     }
     class SubmitCluster extends Cluster{
-        
+        // has submit text
+        // on the right side of center
     }
 
     class Group {
@@ -985,7 +989,11 @@ function getTopGroups(floorInfo) {
         return groups
     }
     // ====================== EXE ==========================
-    const IElementClasses = [IField, IDropdown, CustomDropdown, ISelect]
+    const IElementClasses = [IField, IDropdown, ISelect]
+    const ClusterClasses = [
+     ListCluster, InlineCluster, GridCluster,
+      OpenerCluster, FieldICluster, SubmitCluster,
+    ]
     const context = floorInfo.context;
     const contextPath = floorInfo.contextPath;
 
