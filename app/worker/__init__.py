@@ -4,7 +4,7 @@ from ..profile import Profile
 from ..actor import Actor
 from ..state import State
 
-from d_types import ParsedInputAnswer, get_parsed_input_answers, Group, convert_to_group
+from d_types import GroupAnswer, Group
 from static.profile_manager import ProfileSeed
 from helper import utils, config
 from funcs import pauser, vacuum, AI
@@ -90,7 +90,7 @@ class Worker:
             
         self.last_url = browser_url
         parsed_groups = self.browser.get_parsed_groups()
-        groups = [convert_to_group(p) for p in parsed_groups]
+        groups = [Group(p) for p in parsed_groups]
         group = self.__filter_parsed_groups(groups)
         
         if not group:
@@ -107,7 +107,7 @@ class Worker:
         
         context = self.profile.get_context(group.search_verbose)
         answer = AI.answer_parsed_group(group.chat_verbose, self.worker_id, context)
-        parsed_input_answers:list[ParsedInputAnswer] = get_parsed_input_answers(group, answer)
+        group_answer = GroupAnswer(group, answer)
         
         print("=============")
         print("context:\n",context)
@@ -117,12 +117,11 @@ class Worker:
         print("answer:\n",answer)
         print("=============")
         
-        for parsed_input_answer in parsed_input_answers:
-            if not self.state.is_ai_answer_valid(parsed_input_answer):
-                print("parsed_input_answer:",parsed_input_answer)
-                self.actor.help("AI answer is not valid")
-            else:
-                self.actor.solve_input_answer(parsed_input_answer)
+        if not self.state.is_ai_answer_valid(group_answer):
+            print("group_answer:",group_answer)
+            self.actor.help("AI answer is not valid")
+        else:
+            self.actor.solve_input_answer(group_answer)
 
         return True
         

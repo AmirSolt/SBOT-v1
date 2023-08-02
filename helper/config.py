@@ -1,5 +1,6 @@
 
-
+import os
+home = os.getcwd()
 
 
 WORKER_DIR = "./saves/workers/{worker_id}/"
@@ -18,11 +19,10 @@ PROFILE_DIR = WORKER_DIR + "profile/"
 PROFILE_SEED_FILE = PROFILE_DIR + "seed.json"
 PROFILE_MEMORY_DIR = PROFILE_DIR + "memory/"  # .GITIGNORE
 PROFILE_PERM_MEM_FILE = PROFILE_MEMORY_DIR + "perm_memory.json" # .GITIGNORE
-PROFILE_SURVEY_MEM_FILE = PROFILE_MEMORY_DIR + "survey_memory.json" # .GITIGNORE
 
-HIGHLIGHT_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/highlight.js"
-SCRIPT_SCROLL_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/scroll.js"
-SCRIPT_MAIN_PATH = "C:/Users/killo/Desktop/SBOT/helper/scripts/main.js"
+HIGHLIGHT_PATH = f"{home}/helper/scripts/highlight.js"
+SCRIPT_SCROLL_PATH = f"{home}/helper/scripts/scroll.js"
+SCRIPT_MAIN_PATH = f"{home}/helper/scripts/main.js"
 
 CHROME_WELCOME_URL = "chrome://welcome/"
 LOGIN_URL = "https://www.surveyjunkie.com/?login"

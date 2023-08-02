@@ -1,6 +1,6 @@
 
 from ..browser import Browser
-from d_types import ParsedInputAnswer, Group, IElement, ActionType
+from d_types import GroupAnswer, Group, IElement, ActionType
 from helper import config
 import re
 import yarl
@@ -45,5 +45,5 @@ class State:
             return False
         return group.ielements[0].action_type == ActionType.select
 
-    def is_ai_answer_valid(self, parsed_input_answer:ParsedInputAnswer):
-        return parsed_input_answer.is_answer_valid()
+    def is_ai_answer_valid(self, group_answer:GroupAnswer):
+        return group_answer.is_answer_valid()

@@ -9,111 +9,96 @@ class ActionType:
     select = "select"
     dropdown = "dropdown"
 
+class IAction:
+    def __init__(self, e:dict) -> None:
+        self.action_type:str = e["action_type"]
+        self.context_path:str = e["context_path"]
+        self.path:str = e["path"]
+        self.text:str|None = e.get("text")
+        self.option_index:int|None = e.get("option_index")
+        self.answer:str|None = None
 
+    def set_answer(self, answer):
+        self.answer = answer
 
-class IElement:
-    
-    def  __init__(self, action_type:str, path:str, options:list[str]|None) -> None:
-        self.action_type = action_type
-        self.path = path
-        self.options = options
-        
     def __repr__(self):
-        return f"\n{self.action_type=}|\n{self.path=}|\n{self.options=}"
+        return f"\n{self.action_type=}|\n{self.path=}|\n{self.text=}"
     
+
+class IActionCluster:
+    
+    def __init__(self, iaction_cluster:list[IAction]) -> None:
+        self.iactions:list[IAction] = iaction_cluster
+        self.is_comparable = self.iactions[0]["action_type"] != ActionType.field
+ 
+
+    def __repr__(self):
+        return f"\n{self.iactions=}"
+    
+
+
 
 class Group:
     
     def __init__(self,
-        id:str,
-        context_path:str,
-        chat_verbose:str,
-        search_verbose:str,
-        is_media_group:bool,
-        ielements:list[dict],
+        parsed_group:dict
     ) -> None:
-        self.id = id 
-        self.context_path = context_path 
-        self.chat_verbose = chat_verbose 
-        self.search_verbose = search_verbose 
-        self.is_media_group = is_media_group 
-        self.ielements = [IElement(e["action_type"], e["path"], e.get("options")) for e in ielements] 
+        self.id=parsed_group["id"]
+        self.context_path=parsed_group["context_path"]
         
-
-def convert_to_group(parsed_group:dict)->Group:
-    return Group(
-        id=parsed_group["id"],
-        context_path=parsed_group["context_path"],
-        chat_verbose=parsed_group["chat_verbose"],
-        search_verbose=parsed_group["search_verbose"],
-        is_media_group=parsed_group["is_media_group"],
-        ielements=parsed_group["ielements"],   
-    )
+        self.instruction=parsed_group["instruction"]
+        
+        self.search_verbose=parsed_group["search_verbose"]
+        self.chat_verbose=parsed_group["chat_verbose"]
+        
+        self.is_media_group=parsed_group["is_media_group"]
+        self.iaction_clusters:list[IActionCluster] = [IActionCluster(iaction_cluster) for iaction_cluster in parsed_group["iaction_clusters"]]
+        
+    def __repr__(self):
+        return f"\n{self.instruction=}\n{self.iaction_clusters=}"
+    
 
 
 
 # =========================================================================================================================
 
 
-class ParsedInputAnswer:
+class GroupAnswer:
 
-    def __init__(self, context_path:str, ielements:list[IElement], raw_input_answer:str) -> None:
-        self.raw_input_answer = raw_input_answer
-        parsed_dict = self.__parse_answer(raw_input_answer)
-        self.id:str|None = parsed_dict.get("id")
-        self.answer:str|None = parsed_dict.get("answer")
-        self.option:str|None = parsed_dict.get("option")
+    def __init__(self, group:Group, raw_answer:str) -> None:
+        self.group = group
+        self.raw_answer = raw_answer
+        self.answer_lines = [ans for ans in raw_answer.split("\n") if ans.strip()!=""]
+        self.iactions:list[IAction] = self.__get_iactions()
         
-        self.context_path = context_path
-        self.ielement:IElement = ielements[int(self.id)] if int(self.id) < len(ielements) else NotImplementedError
         
+    def __get_iactions(self):
+        valid_iactions = []
+        for iaction_cluster, answer in zip(self.group.iaction_clusters, self.answer_lines):
+            if iaction_cluster.is_comparable:
+                texts = [iaction.text for iaction in iaction_cluster.iactions]
+                match_index = AI.get_highest_fuzzy_match_index(answer, texts, 70)
+                valid_iaction = iaction_cluster.iactions[match_index]
+                valid_iactions.append(valid_iaction)
+            else:
+                valid_iaction = iaction_cluster.iactions[0]
+                valid_iaction.set_answer(answer)
+                valid_iactions.append(valid_iaction)
+        return valid_iactions
+                
+                
     def is_answer_valid(self)->bool:
-        if not self.ielement:
-            return False
-        if self.ielement.action_type == ActionType.select:
-            return self.id!=None
-        if self.ielement.action_type == ActionType.field:
-            return self.id!=None and self.answer!=None
-        if self.ielement.action_type == ActionType.dropdown:
-            if not (self.id!=None and self.option!=None):
-                return False
-            if not self.ielement.options:
-                return False
-            fuzzy_matches = [AI.is_fuzzy_match(self.option, opt) for opt in self.ielement.options]
-            return True in fuzzy_matches
-
-        return False
-    
-    def __parse_answer(self, text:str)->dict:
-        """
-        "id:1 answer:hello world" -> {"id":1, "answer":"hello world"}
-        """
-        r = {}
-        keys = ['id:', 'answer:', 'option:']
-        parts = re.split("|".join(keys), text)
-        parts = [part.strip() for part in parts if part.strip()!=""]
-        key_indexes = [{"key":key,"index":text.find(key)} for key in keys if text.find(key)!=-1]
-        key_indexes.sort(key=lambda x: x["index"], reverse=False)
-        for i, key_index in enumerate(key_indexes):
-            key = key_index["key"].replace(":","")
-            r[key] = parts[i]
-            
-        return r
+        return len(self.iactions) == len(self.answer_lines)
     
     def __repr__(self):
-        return f"\n{self.id=}|\n{self.answer=}|\n{self.option=}|\n{self.ielement=}|\n{self.context_path=}"
-    
-  
+        return f"\n{self.group=}"
     
     
-def get_parsed_input_answers(group:Group, raw_answer:str)->list[ParsedInputAnswer]:
-    if not raw_answer:
-        return []
-    raw_input_answers = raw_answer.split("\n")
-    return [ParsedInputAnswer(group.context_path, group.ielements, raw_input_answer) for raw_input_answer in raw_input_answers if raw_input_answer.strip()!=""]
-
-
-
+    
+class IAnswer:
+    pass
+    
+    
 # =========================================================================================================================
 
 

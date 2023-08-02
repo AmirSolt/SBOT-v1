@@ -121,12 +121,16 @@ def get_chat_messages(group_verbose, worker_name:str, context):
 
 
 from thefuzz import fuzz
-FUZZY_THRESH = 70   
+# FUZZY_THRESH = 70   
 
-def is_fuzzy_match(t1:str, t2:str)->bool:
-    similarity_ratio = fuzz.ratio(t1.lower(), t2.lower())
-    return similarity_ratio >= FUZZY_THRESH
+# def is_fuzzy_match(t1:str, t2:str)->bool:
+#     similarity_ratio = fuzz.ratio(t1.lower(), t2.lower())
+#     return similarity_ratio >= FUZZY_THRESH
  
-def get_highest_fuzzy_match_index(t1:str, texts:list[str])->int:
-   scores = [fuzz.ratio(t1.lower(), text.lower()) for text in texts]
-   return scores.index(max(scores))
+def get_highest_fuzzy_match_index(t1:str, texts:list[str], thresh:int=0)->int:
+    """
+    thresh between 0 and 100. 100 is complete match
+    """
+    scores = [fuzz.ratio(t1.lower(), text.lower()) for text in texts]
+    scores = [score for score in scores if score >= thresh]
+    return scores.index(max(scores))
