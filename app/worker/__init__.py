@@ -122,6 +122,7 @@ class Worker:
             self.actor.help("AI answer is not valid")
         else:
             self.actor.solve_input_answer(group_answer)
+            self.profile.add_to_survey_memorys(f"{group_answer.group.instruction} {group_answer.raw_answer}")
 
         return True
         
