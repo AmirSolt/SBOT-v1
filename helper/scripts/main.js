@@ -99,7 +99,7 @@ function cleanText(text) {
     return text.replace(/\s+/g, ' ').trim();
 }
 function getAllText(element) {
-    const text =  element.innerText || '';
+    const text = element.innerText || '';
     return cleanText(text)
 }
 function getDirectText(el) {
@@ -112,24 +112,24 @@ function getDirectText(el) {
     return cleanText(directText)
 }
 function isValidHttpUrl(string) {
-    if(string[0]=="/")
+    if (string[0] == "/")
         return true
 
     let url;
     try {
-      url = new URL(string);
+        url = new URL(string);
     } catch (_) {
-      return false;  
+        return false;
     }
-  
-    return url.protocol === "http:" || url.protocol === "https:" 
+
+    return url.protocol === "http:" || url.protocol === "https:"
 }
 
 
 const ActionType = {
-    field : "field",
-    select : "select",
-    dropdown : "dropdown",
+    field: "field",
+    select: "select",
+    dropdown: "dropdown",
 }
 
 class Vis {
@@ -159,6 +159,15 @@ class Vis {
     }
 }
 class Rect {
+    AlignIds = {
+        x0 : "left",
+        x1 : "center_x",
+        x2 : "right",
+        y0 : "top",
+        y1 : "center_y",
+        y2 : "bottom",
+    }
+
     constructor(x, y, w, h) {
         this.x = x
         this.y = y
@@ -169,6 +178,24 @@ class Rect {
     }
     get area() {
         return this.w * this.h
+    }
+    getAlignment(alignId){
+        switch (alignId.toLowerCase().trim()) {
+            case Rect.AlignIds.x0:
+                return this.x
+            case Rect.AlignIds.x1:
+                return this.cx
+            case Rect.AlignIds.x2:
+                return this.x+this.w
+            case Rect.AlignIds.y0:
+                return this.y
+            case Rect.AlignIds.y1:
+                return this.cy
+            case Rect.AlignIds.y2:
+                return this.y+this.h
+            default:
+                throw new Error(`direction: ${direction} doesnt exist`);
+        }
     }
     static elementToRect(element) {
         const domRect = element.getBoundingClientRect()
@@ -237,12 +264,12 @@ class Rect {
 
         return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
-    static isContaining(parentRect, childRect){
+    static isContaining(parentRect, childRect) {
         return (
             (parentRect.x <= childRect.x) &&
             (parentRect.y <= childRect.y) &&
-            (parentRect.y + parentRect.h >= childRect.y+parentRect.h) &&
-            (parentRect.x + parentRect.w >= childRect.x+parentRect.w) 
+            (parentRect.y + parentRect.h >= childRect.y + parentRect.h) &&
+            (parentRect.x + parentRect.w >= childRect.x + parentRect.w)
         )
     }
 }
@@ -330,24 +357,24 @@ class FloorInfo {
     }
 }
 
-class Action{
-    constructor(actionType, path, optionIndex){
+class Action {
+    constructor(actionType, path, optionIndex) {
         this.actionType = actionType
         this.path = path
         this.optionIndex = optionIndex
     }
 }
-class Chain{
-    constructor(text, actions){
+class Chain {
+    constructor(text, actions) {
         this.text = text
         this.actions = actions
     }
 }
-class Cable{
-    constructor(chains, isComparable){
+class Cable {
+    constructor(chains, isComparable) {
         this.chains = chains
         this.isComparable = isComparable
-        
+
     }
 }
 
@@ -429,7 +456,7 @@ function getTopGroups(floorInfo) {
             this.cluster = null
             this.path = this.getPath()
         }
-        static toAvoid(el){
+        static toAvoid(el) {
             return (
                 Segment.isLink(el)
             )
@@ -439,22 +466,22 @@ function getTopGroups(floorInfo) {
             const style = window.getComputedStyle(el);
             if (!Vis.isSpatial(style, rect))
                 return false
-            if(!isContaining(page, rect))
+            if (!isContaining(page, rect))
                 return false
             if (Vis.isLowVis(style))
                 return false
             return true
         }
-        static isLink(el){
+        static isLink(el) {
             return (
                 getElementTagname(el) === "a" &&
                 (
                     (
-                    el.getAttribute("href") != null &&
-                    isValidHttpUrl(el.getAttribute("href"))
+                        el.getAttribute("href") != null &&
+                        isValidHttpUrl(el.getAttribute("href"))
                     ) ||
                     el.getAttribute("target") == "_blank"
-                ) 
+                )
             )
         }
         setCluster(cluster) {
@@ -563,7 +590,7 @@ function getTopGroups(floorInfo) {
             this.color = "blue"
             this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
         }
-        getAction( option_index){
+        getAction(option_index) {
             throw new Error('==== Abstract class ====');
         }
         getChatVerbose() {
@@ -596,7 +623,7 @@ function getTopGroups(floorInfo) {
             this.color = "red"
             this.text = getAllText(element) || getDirectText(element) || ""
         }
-        getAction( option_index){
+        getAction(option_index) {
             return Action(ActionType.select, this.path, null)
         }
         static isType(element) {
@@ -630,7 +657,7 @@ function getTopGroups(floorInfo) {
             this.labelName = "Field"
             this.verboseName = "Field"
         }
-        getAction(option_index){
+        getAction(option_index) {
             return Action(ActionType.field, this.path, null)
         }
         static isType(element) {
@@ -662,7 +689,7 @@ function getTopGroups(floorInfo) {
             this.options = this.getOptions()
             this.text = this.options[0] || ""
         }
-        getAction(option_index){
+        getAction(option_index) {
             return Action(ActionType.dropdown, this.path, option_index)
         }
         static isType(element) {
@@ -702,38 +729,56 @@ function getTopGroups(floorInfo) {
     }
 
 
-    class Cluster{
-        constructor(){
+    class Cluster {
+        constructor() {
             this.instruction = null
             this.ielements = []
             this.imedias = []
         }
-        static isType(){
-
+        static getAlignments(segments, alignId) {
+            const err = unit/4;
+            if (!Array.isArray(arr)) throw new Error('Input must be an array');
+            let grouped = [];
+            let tempArr = [];
+            segments.forEach(segment => {
+                if (tempArr.length === 0 ||
+                    Math.abs(tempArr[0].rect.getAlignment(alignId) - segment.rect.getAlignment(alignId)) <= err) {
+                    tempArr.push(segment);
+                } else {
+                    if (tempArr.length > 1) {
+                        grouped.push(tempArr);
+                    }
+                    tempArr = [segment]
+                }
+            })
+            if (tempArr.length > 1) {
+                grouped.push(tempArr);
+            }
+            return grouped;
         }
-        isInstruction(){
-
-        }
-        static getCluster(target){
+        static getClusters(segments){
+            Rect.AlignIds
         }
     }
-    class ListCluster extends Cluster{
+    class ListCluster extends Cluster {
 
     }
-    class InlineCluster extends Cluster{
+    class InlineCluster extends Cluster {
 
     }
-    class GridCluster extends Cluster{
+    class GridCluster extends Cluster {
 
     }
-    class OpenerCluster extends Cluster{
+
+    // Non cluster
+    class OpenerCluster extends Cluster {
         // has near by text
         // is not submit
     }
-    class FieldICluster extends Cluster{
-        
+    class FieldICluster extends Cluster {
+
     }
-    class SubmitCluster extends Cluster{
+    class SubmitCluster extends Cluster {
         // has submit text
         // on the right side of center
     }
@@ -834,15 +879,15 @@ function getTopGroups(floorInfo) {
         getID() {
             function roundToMultiple(num, mult) {
                 const remainder = num % mult;
-              
-                if (Math.abs(remainder) >= mult/2) {
-                  if (num < 0) {
-                    return Math.floor(num / mult) * mult;
-                  } else {
-                    return Math.ceil(num / mult) * mult;
-                  }
+
+                if (Math.abs(remainder) >= mult / 2) {
+                    if (num < 0) {
+                        return Math.floor(num / mult) * mult;
+                    } else {
+                        return Math.ceil(num / mult) * mult;
+                    }
                 } else {
-                  return Math.round(num / mult) * mult;
+                    return Math.round(num / mult) * mult;
                 }
             }
             const mult = 100;
@@ -859,8 +904,8 @@ function getTopGroups(floorInfo) {
                 "chat_verbose": this.getChatVerbose(),
                 "search_verbose": this.getSearchVerbose(),
                 "is_media_group": this.isMediaGroup(),
-                "instruction":null,
-                "cables":null,
+                "instruction": null,
+                "cables": null,
             }
         }
     }
@@ -885,13 +930,13 @@ function getTopGroups(floorInfo) {
     function getSegments(context) {
         function traverseChildren(element, segments) {
             if (Segment.isType(element)) {
-                if(Segment.toAvoid(element)){
+                if (Segment.toAvoid(element)) {
                     return segments
                 }
                 let segment = Segment.getSegment(element);
                 if (segment) {
                     segments.push(segment);
-                    if(segment instanceof IElement)
+                    if (segment instanceof IElement)
                         return segments
                 }
             }
@@ -915,17 +960,17 @@ function getTopGroups(floorInfo) {
             let bottomSide = page.h - topSide;
             return (
                 !group.segments.length == 1 &&
-                !group.segments.some(segment=> segment instanceof ISubmit) &&
+                !group.segments.some(segment => segment instanceof ISubmit) &&
                 (
-                    group.rect.w < FLOOR_EDGE*FLOOR_MUTL ||
-                    group.rect.h < FLOOR_EDGE*FLOOR_MUTL 
+                    group.rect.w < FLOOR_EDGE * FLOOR_MUTL ||
+                    group.rect.h < FLOOR_EDGE * FLOOR_MUTL
                 ) &&
                 (
                     group.rect.cy > bottomSide ||
                     group.rect.cy < topSide
                 )
-                ) 
-        
+            )
+
         }
         function getLvl1Grouping(ielements, segments) {
             let groups = []
@@ -991,8 +1036,8 @@ function getTopGroups(floorInfo) {
     // ====================== EXE ==========================
     const IElementClasses = [IField, IDropdown, ISelect]
     const ClusterClasses = [
-     ListCluster, InlineCluster, GridCluster,
-      OpenerCluster, FieldICluster, SubmitCluster,
+        ListCluster, InlineCluster, GridCluster,
+        OpenerCluster, FieldICluster, SubmitCluster,
     ]
     const context = floorInfo.context;
     const contextPath = floorInfo.contextPath;
