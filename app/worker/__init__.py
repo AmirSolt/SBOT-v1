@@ -123,7 +123,7 @@ class Worker:
         else:
             self.actor.solve_input_answer(group_answer)
             for answer_line in group_answer.answer_lines:
-                self.profile.add_to_survey_memorys(answer_line)
+                self.profile.add_to_survey_memorys(f"{group.instruction}:  {answer_line}")
 
         return True
         

@@ -268,8 +268,8 @@ class Rect {
         return (
             (parentRect.x <= childRect.x) &&
             (parentRect.y <= childRect.y) &&
-            (parentRect.y + parentRect.h >= childRect.y + parentRect.h) &&
-            (parentRect.x + parentRect.w >= childRect.x + parentRect.w)
+            (parentRect.y + parentRect.h >= childRect.y + childRect.h) &&
+            (parentRect.x + parentRect.w >= childRect.x + childRect.w)
         )
     }
 }
@@ -446,6 +446,8 @@ function getFloorInfo() {
 
 function getTopGroups(floorInfo) {
 
+    // throw new Error('==== Abstract class ====');
+
     class Segment {
         constructor(element) {
             this.element = element
@@ -458,7 +460,9 @@ function getTopGroups(floorInfo) {
         }
         static toAvoid(el) {
             return (
-                Segment.isLink(el)
+                Segment.isLink(el) 
+                ||
+                Segment.isOverflow(el)
             )
         }
         static isType(el) {
@@ -466,7 +470,7 @@ function getTopGroups(floorInfo) {
             const style = window.getComputedStyle(el);
             if (!Vis.isSpatial(style, rect))
                 return false
-            if (!isContaining(page, rect))
+            if (!Rect.isContaining(page, rect))
                 return false
             if (Vis.isLowVis(style))
                 return false
@@ -484,6 +488,15 @@ function getTopGroups(floorInfo) {
                 )
             )
         }
+        static isOverflow(el){
+            const style = window.getComputedStyle(el);
+
+            return(
+                style.overflow == "auto" || style.overflow == "scroll" ||
+                style.overflowX == "auto" || style.overflowX == "scroll" ||
+                style.overflowY == "auto" || style.overflowY == "scroll"
+            )
+        }
         setCluster(cluster) {
             this.cluster = cluster
         }
@@ -499,90 +512,13 @@ function getTopGroups(floorInfo) {
         static getSegment(el) {
             let segment = IElement.getIElement(el);
             if (segment == null)
-                segment = MediaElement.getMediaElement(el)
-            if (segment == null)
                 segment = TextElement.getTextElement(el)
+            if (segment == null)
+                segment = MediaElement.getMediaElement(el)
             if (segment == null || segment.rect == null)
                 return null
             return segment
         }
-    }
-    class TextElement extends Segment {
-        constructor(element) {
-            super(element);
-            this.labelName = "Text"
-            this.verboseName = "Text"
-            this.color = "green"
-            this.text = getDirectText(element) || ""
-        }
-        static isType(element) {
-            if (getDirectText(element))
-                return true
-            return false
-        }
-        getChatVerbose() {
-            return this.text
-        }
-        getSearchVerbose() {
-            return this.text
-        }
-        static getTextElement(el) {
-            if (TextElement.isType(el)) {
-                return new TextElement(el)
-            }
-            return null
-        }
-    }
-    class MediaElement extends Segment {
-        constructor(element) {
-            super(element);
-            this.labelName = "Media"
-            this.verboseName = "Media"
-            this.color = "red"
-        }
-        static isType(element) {
-            return (
-                (
-                    getElementTagname(element) == "img" &&
-                    element.getAttribute("src") != null &&
-                    MediaElement.isMinImageSize(element)
-                ) ||
-                (
-                    getElementTagname(element) == "video" &&
-                    MediaElement.isMinMediaSize(element)
-                ) ||
-                (
-                    getElementTagname(element) == "audio" &&
-                    MediaElement.isMinMediaSize(element)
-                )
-            )
-        }
-        getChatVerbose() {
-            return `[${this.verboseName}]`
-        }
-        getSearchVerbose() {
-            return ""
-        }
-        static isMinMediaSize(el) {
-            const rect = Rect.elementToRect(el)
-            return (
-                rect.w > minMediaSize * unit &&
-                rect.h > minMediaSize * unit
-            )
-        }
-        static isMinImageSize(el) {
-            const rect = Rect.elementToRect(el)
-            return (
-                rect.w > minImageSize * unit &&
-                rect.h > minImageSize * unit
-            )
-        }
-        static getMediaElement(el) {
-            if (MediaElement.isType(el))
-                return new MediaElement(el)
-            return null
-        }
-
     }
     class IElement extends Segment {
         constructor(element) {
@@ -590,7 +526,7 @@ function getTopGroups(floorInfo) {
             this.color = "blue"
             this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
         }
-        getAction(option_index) {
+        getAction(optionIndex) {
             throw new Error('==== Abstract class ====');
         }
         getChatVerbose() {
@@ -613,8 +549,95 @@ function getTopGroups(floorInfo) {
             return new IElementClass(el);
         }
     }
+    class MediaElement extends Segment {
+        constructor(element) {
+            super(element);
+            this.labelName = "Media"
+            this.verboseName = "Media"
+            this.color = "cyan"
+        }
+        static isType(element) {
+            throw new Error('==== Abstract class ====');
+        }
+        getChatVerbose() {
+            return `[${this.verboseName}]`
+        }
+        getSearchVerbose() {
+            return ""
+        }
+        static isMinMediaSize(el) {
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minMediaSize * unit &&
+                rect.h > minMediaSize * unit
+            )
+        }
+        static isMinImageSize(el) {
+            const rect = Rect.elementToRect(el)
+            return (
+                rect.w > minImageSize * unit &&
+                rect.h > minImageSize * unit
+            )
+        }
+        static getMediaElement(el) {
+            const MediaClass = MediaClasses.find(MediaClass => MediaClass.isType(el))
+            if (!MediaClass)
+                return null
+            return new MediaClass(el);
+        }
 
+    }
+    class TextElement extends Segment {
+        constructor(element) {
+            super(element);
+            this.labelName = "Text"
+            this.verboseName = "Text"
+            this.color = "green"
+            this.text = getDirectText(element) || ""
+        }
+        static isType(element) {
+            throw new Error('==== Abstract class ====');
+        }
+        getChatVerbose() {
+            return this.text
+        }
+        getSearchVerbose() {
+            return this.text
+        }
+        static getTextElement(el) {
+            const TextClass = TextClasses.find(TextClass => TextClass.isType(el))
+            if (!TextClass)
+                return null
+            return new TextClass(el);
+        }
+    }
+    // =======================
 
+    class IText extends TextElement{
+        constructor(element) {
+            super(element);
+            this.labelName = "Text"
+            this.verboseName = "Text"
+            this.color = "blue"
+        }
+        static isType(element) {
+            if (getDirectText(element))
+                return true
+            return false
+        }
+    }
+    class Instruction extends TextElement{
+        constructor(element) {
+            super(element);
+            this.labelName = "Instruction"
+            this.verboseName = "Instruction"
+            this.color = "green"
+        }
+        static isType(segments, segment) {
+            return false
+        }
+    }
+    // =======================
     class ISelect extends IElement {
         constructor(element) {
             super(element);
@@ -623,7 +646,7 @@ function getTopGroups(floorInfo) {
             this.color = "red"
             this.text = getAllText(element) || getDirectText(element) || ""
         }
-        getAction(option_index) {
+        getAction(optionIndex) {
             return Action(ActionType.select, this.path, null)
         }
         static isType(element) {
@@ -657,7 +680,7 @@ function getTopGroups(floorInfo) {
             this.labelName = "Field"
             this.verboseName = "Field"
         }
-        getAction(option_index) {
+        getAction(optionIndex) {
             return Action(ActionType.field, this.path, null)
         }
         static isType(element) {
@@ -689,8 +712,8 @@ function getTopGroups(floorInfo) {
             this.options = this.getOptions()
             this.text = this.options[0] || ""
         }
-        getAction(option_index) {
-            return Action(ActionType.dropdown, this.path, option_index)
+        getAction(optionIndex) {
+            return Action(ActionType.dropdown, this.path, optionIndex)
         }
         static isType(element) {
             if (
@@ -727,61 +750,66 @@ function getTopGroups(floorInfo) {
             return text
         }
     }
-
-
-    class Cluster {
-        constructor() {
-            this.instruction = null
-            this.ielements = []
-            this.imedias = []
+    class CustomDropdown extends IElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Custom Dropdown"
+            this.verboseName = "Custom Dropdown"
+            this.options = this.getOptions()
+            this.text = null
         }
-        static getAlignments(segments, alignId) {
-            const err = unit/4;
-            if (!Array.isArray(arr)) throw new Error('Input must be an array');
-            let grouped = [];
-            let tempArr = [];
-            segments.forEach(segment => {
-                if (tempArr.length === 0 ||
-                    Math.abs(tempArr[0].rect.getAlignment(alignId) - segment.rect.getAlignment(alignId)) <= err) {
-                    tempArr.push(segment);
-                } else {
-                    if (tempArr.length > 1) {
-                        grouped.push(tempArr);
-                    }
-                    tempArr = [segment]
-                }
-            })
-            if (tempArr.length > 1) {
-                grouped.push(tempArr);
-            }
-            return grouped;
+        static isType(el){
+
         }
-        static getClusters(segments){
-            Rect.AlignIds
+        getOptions(){
+
+        }
+        getAction(optionIndex){
+
         }
     }
-    class ListCluster extends Cluster {
+    // =========
+    class ISubmit extends IElement{
+        static isType(segments, segment) {
+            return false
+        }
+    }
+    // =======================
+    class IPicture extends MediaElement{
+        static isType(element) {
+            return (
+                (
+                    getElementTagname(element) == "img" &&
+                    element.getAttribute("src") != null &&
+                    MediaElement.isMinImageSize(element)
+                ) 
+            )
+        }
+    }
+    class IVideo extends MediaElement{
 
+        static isType(element) {
+            return (
+                (
+                    getElementTagname(element) == "video" &&
+                    MediaElement.isMinMediaSize(element)
+                )
+            )
+        }
     }
-    class InlineCluster extends Cluster {
+    class IAudio extends MediaElement{
 
+        static isType(element) {
+            return (
+                (
+                    getElementTagname(element) == "audio" &&
+                    MediaElement.isMinMediaSize(element)
+                )
+            )
+        }
     }
-    class GridCluster extends Cluster {
 
-    }
-
-    // Non cluster
-    class OpenerCluster extends Cluster {
-        // has near by text
-        // is not submit
-    }
-    class FieldICluster extends Cluster {
-
-    }
-    class SubmitCluster extends Cluster {
-        // has submit text
-        // on the right side of center
-    }
+    // strategist
 
     class Group {
         constructor(initSegment) {
@@ -865,7 +893,7 @@ function getTopGroups(floorInfo) {
                 }, "")
                 .trim()
         }
-        getIElementsDict() {
+        getIElementsDicts() {
             const ielements = this.segments.filter(segment => segment instanceof IElement)
             return ielements.map(ielement => ielement.getDict())
         }
@@ -873,8 +901,9 @@ function getTopGroups(floorInfo) {
             const ielements = this.segments.filter(segment => segment instanceof IElement)
             return ielements.findIndex(iel => iel === ielement)
         }
-        isMediaGroup() {
-            return this.segments.some(segment => segment instanceof MediaElement)
+        getMediaDicts() {
+            const medias = this.segments.filter(segment => segment instanceof MediaElement)
+            return medias.map(media => media.getDict())
         }
         getID() {
             function roundToMultiple(num, mult) {
@@ -903,7 +932,7 @@ function getTopGroups(floorInfo) {
                 "context_path": contextPath,
                 "chat_verbose": this.getChatVerbose(),
                 "search_verbose": this.getSearchVerbose(),
-                "is_media_group": this.isMediaGroup(),
+                "imedia": this.getMediaDicts(),
                 "instruction": null,
                 "cables": null,
             }
@@ -926,8 +955,8 @@ function getTopGroups(floorInfo) {
             }
         });
     }
-    // ====================== Segments ==========================
-    function getSegments(context) {
+    // ====================== lvl1 segmenting ==========================
+    function segmenting0(context) {
         function traverseChildren(element, segments) {
             if (Segment.isType(element)) {
                 if (Segment.toAvoid(element)) {
@@ -949,7 +978,17 @@ function getTopGroups(floorInfo) {
         segments = traverseChildren(context.body, segments);
         return segments
     }
-    // ====================== Clustering ==========================
+    // ====================== lvl2 segmenting ==========================
+    function segmenting1(segments) {
+        for (let index = 0; index < segments.length; index++) {
+            const segment = segments[index];
+            const ContextualClass = ContextualClasses.find(ContextualClass => ContextualClass.isType(segments, segment))
+                if (ContextualClass)
+                    segments[index] = new ContextualClass(segment.element)
+        }
+        return segments
+    }
+    // ====================== grouping ==========================
 
     // ====================== Grouping ==========================
     function getGroups(segments) {
@@ -1034,20 +1073,24 @@ function getTopGroups(floorInfo) {
         return groups
     }
     // ====================== EXE ==========================
-    const IElementClasses = [IField, IDropdown, ISelect]
-    const ClusterClasses = [
-        ListCluster, InlineCluster, GridCluster,
-        OpenerCluster, FieldICluster, SubmitCluster,
-    ]
+    const TextClasses = [IText]
+    const IElementClasses = [IField, IDropdown, CustomDropdown, ISelect]
+    const MediaClasses = [IAudio, IVideo, IPicture]
+    const ContextualClasses = [Instruction, ISubmit]
     const context = floorInfo.context;
     const contextPath = floorInfo.contextPath;
 
 
-    let gSegments = getSegments(context)
+    let gSegments = segmenting0(context)
+
+    gSegments = segmenting1(gSegments)
 
     console.log("segments:", gSegments)
 
-    const gGroups = getGroups(gSegments)
+    highlightSegments(gSegments)
+
+    // const gGroups = getGroups(gSegments)
+    const gGroups = []
 
     console.log("groups:", gGroups)
 
