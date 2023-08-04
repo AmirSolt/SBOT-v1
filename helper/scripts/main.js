@@ -461,7 +461,7 @@ function getTopGroups(floorInfo) {
             this.verboseName = ""
             this.color = "white"
             this.rect = Rect.elementToRect(element)
-            this.cluster = null
+            this.group = null
             this.path = this.getPath()
         }
         static toAvoid(el) {
@@ -503,8 +503,8 @@ function getTopGroups(floorInfo) {
                 style.overflowY == "auto" || style.overflowY == "scroll"
             )
         }
-        setCluster(cluster) {
-            this.cluster = cluster
+        setGroup(group) {
+            this.group = group
         }
         getChatVerbose() {
             throw new Error('==== Abstract class ====');
@@ -599,7 +599,7 @@ function getTopGroups(floorInfo) {
             this.labelName = "Text"
             this.verboseName = "Text"
             this.color = "green"
-            this.text = getDirectText(element) || ""
+            this.text = null
         }
         static isType(element) {
             throw new Error('==== Abstract class ====');
@@ -625,9 +625,10 @@ function getTopGroups(floorInfo) {
             this.labelName = "Text"
             this.verboseName = "Text"
             this.color = "blue"
+            this.text = getAllText(element) || getDirectText(element) || ""
         }
         static isType(element) {
-            return getDirectText(element) != null
+            return getDirectText(element) !== ""
         }
     }
     class Instruction extends TextElement{
@@ -635,10 +636,17 @@ function getTopGroups(floorInfo) {
             super(element);
             this.labelName = "Instruction"
             this.verboseName = "Instruction"
-            this.color = "green"
+            this.color = "yellow"
         }
         static isType(segments, segment) {
-            return false
+            if(!(segment instanceof IText))
+                return false
+            // if(getElementTagname(segment.element)==="label")
+            //     return false
+            return !segments.some(seg2=>
+                Rect.areYBoundsOverlaping(segment.rect, seg2.rect)&&
+                seg2.rect.x < segment.rect.x
+            )
         }
     }
     // =======================
@@ -659,8 +667,12 @@ function getTopGroups(floorInfo) {
                     getElementTagname(element) == "input" &&
                     (
                         element.getAttribute("type") == "radio" ||
-                        element.getAttribute("type") == "checkbox"
+                        element.getAttribute("type") == "checkbox" ||
+                        element.getAttribute("type") == "submit" 
                     )
+                ) ||
+                (
+                    getElementTagname(element) == "button"
                 ) ||
                 ISelect.isInteractable(element)
             ) return true
@@ -759,8 +771,8 @@ function getTopGroups(floorInfo) {
             super(element);
             this.labelName = "Custom Dropdown"
             this.verboseName = "Custom Dropdown"
+            this.text = getAllText(element)
             this.options = this.getOptions()
-            this.text = null
         }
         static isType(el){
             const rect = Rect.elementToRect(el)
@@ -782,16 +794,44 @@ function getTopGroups(floorInfo) {
             })
         }
         getOptions(){
-
+            const texts = this.element.textContent.split('\n')
+                .map(s => s.trim())
+                .filter(Boolean)
+            return texts.filter(text=> text!=this.text)    
         }
         getAction(optionIndex){
-
+            // the initial action could be basic element if innerText === ""
+            // or it could be the element innerText
+            // for every other element use text to find the elemenet
         }
     }
     // =========
     class ISubmit extends IElement{
+        constructor(element){
+            super(element);
+            this.labelName = "Submit"
+            this.verboseName = "Submit"
+            this.color = "red"
+            this.text = getAllText(element) || getDirectText(element) || ""
+        }
         static isType(segments, segment) {
-            return false
+            if(!(segment instanceof ISelect))
+                return false
+            if(!ISubmit.hasSubmitBehaviour(segment))
+                return false
+            return true
+            
+        }
+        static hasSubmitBehaviour(segment){
+            const possibleSubmitText = ["submit", "continue","next","ok",">","->","→"]
+            const style = getComputedStyle(segment.element)
+            return (
+                (
+                    segment.text &&
+                    possibleSubmitText.includes(segment.text.toLowerCase()) 
+                )||
+                Vis.hasBG(style)
+            )
         }
     }
     // =======================
@@ -832,26 +872,16 @@ function getTopGroups(floorInfo) {
     // strategist
 
     class Group {
-        constructor(initSegment) {
-            this.rect = initSegment.rect
-            this.segments = [initSegment]
+        constructor() {
+            this.rect = null
+            this.instructions = []
+            this.otherSegments = []
         }
-        updateRect(segment) {
-            this.rect = Rect.combineRects([this.rect, segment.rect])
-        }
-        isSoloGroup(initSegment) {
-            return initSegment instanceof ISubmit
-        }
-        isGroup(segment) {
-            if (
-                segment instanceof Segment &&
-                !(segment instanceof ISubmit) &&
-                segment.group == null &&
-                Rect.isWithinMargin(this.rect, segment.rect, innerGroupMargin * unit, "l,r,t,b")
-            ) {
-                return true
-            }
-            return false
+        updateRect(segments) {
+            const rects = segments.map(seg=>seg.rect)
+            if(this.rect!=null)
+                rects.push(this.rect)
+            this.rect = Rect.combineRects(rects)
         }
         isInstruction(textElement) {
             if (
@@ -862,13 +892,22 @@ function getTopGroups(floorInfo) {
             }
             return false
         }
-        addToGroup(segment) {
-            this.segments.push(segment)
-            this.updateRect(segment)
+        addInstruction(instruction){
+            this.instructions.push(instruction)
+            this.updateRect([instruction])
+
+        }
+        addSegment(segment) {
+            this.otherSegments.push(segment)
+            this.updateRect([segment])
+        }
+        addAllSegments(segments) {
+            this.otherSegments.push(...segments)
+            this.updateRect(segments)
         }
 
         getChatVerbose() {
-            return this.segments
+            return this.otherSegments
                 .sort((a, b) => {
                     // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
                     const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
@@ -894,7 +933,7 @@ function getTopGroups(floorInfo) {
                 .trim()
         }
         getSearchVerbose() {
-            return this.segments
+            return this.otherSegments
                 .sort((a, b) => {
                     // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
                     const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
@@ -914,15 +953,15 @@ function getTopGroups(floorInfo) {
                 .trim()
         }
         getIElementsDicts() {
-            const ielements = this.segments.filter(segment => segment instanceof IElement)
+            const ielements = this.otherSegments.filter(segment => segment instanceof IElement)
             return ielements.map(ielement => ielement.getDict())
         }
         getIElementIndex(ielement) {
-            const ielements = this.segments.filter(segment => segment instanceof IElement)
+            const ielements = this.otherSegments.filter(segment => segment instanceof IElement)
             return ielements.findIndex(iel => iel === ielement)
         }
         getMediaDicts() {
-            const medias = this.segments.filter(segment => segment instanceof MediaElement)
+            const medias = this.otherSegments.filter(segment => segment instanceof MediaElement)
             return medias.map(media => media.getDict())
         }
         getID() {
@@ -1000,12 +1039,12 @@ function getTopGroups(floorInfo) {
     }
     // ====================== lvl2 segmenting ==========================
     function segmenting1(segments) {
-        for (let index = 0; index < segments.length; index++) {
-            const segment = segments[index];
-            const ContextualClass = ContextualClasses.find(ContextualClass => ContextualClass.isType(segments, segment))
-                if (ContextualClass)
-                    segments[index] = new ContextualClass(segment.element)
-        }
+        ContextualClasses.forEach(ContextualClass=>{
+            segments.forEach((segment,i)=>{
+                if(ContextualClass.isType(segments, segment))
+                    segments[i] = new ContextualClass(segment.element)
+            })
+        })
         return segments
     }
     // ====================== grouping ==========================
@@ -1031,35 +1070,81 @@ function getTopGroups(floorInfo) {
             )
 
         }
-        function getLvl1Grouping(ielements, segments) {
+        function getLvl1Grouping(instructions, otherSegments) {
+            function isSegInBetween(otherSegments, instruction, diff){
+                return otherSegments.some(segment=>{
+                    const diff2 = (segment.rect.y+segment.rect.h) - instruction.rect.y 
+                    return(
+                        diff2>0&&
+                        diff2<=diff
+                    )
+                })
+            }
+
             let groups = []
-            ielements.forEach(ielement => {
-                if (ielement.group == null) {
-                    const group = new Group(ielement)
-                    ielement.setGroup(group)
+            instructions.forEach(instruction => {
+                if(instruction.group == null) {
+                    const group = new Group()
+                    instruction.setGroup(group)
+                    group.addInstruction(instruction)
                     groups.push(group)
-                    if (group.isSoloGroup(ielement))
-                        return
-                    segments.forEach(segment => {
-                        if (segment.group != null)
-                            return
-                        if (ielement.group.isGroup(segment)) {
-                            ielement.group.addToGroup(segment)
-                            segment.setGroup(ielement.group)
+                    for (let index = 0; index < instructions.length; index++) {
+                        const instruction2 = instructions[index];
+                        if (instruction2.group != null)
+                            continue
+                        const diff = instruction2.rect.y - instruction.rect.y 
+                        if(diff<=0)
+                            continue
+                        if(isSegInBetween(otherSegments, instruction, diff)){
+                            break
                         }
-                    });
+                        else{
+                            instruction2.setGroup(group)
+                            group.addInstruction(instruction2)
+                        }
+                    }
                 }
             });
             return groups;
         }
-        function getLvl2Grouping(groups, textElements) {
-            groups.forEach(group => {
-                const instructionIndex = textElements.findIndex(textElement => group.isInstruction(textElement))
-                if (instructionIndex == -1)
-                    return
-                group.addToGroup(textElements[instructionIndex])
-                textElements.splice(instructionIndex, 1)
-            });
+        function getLvl2Grouping(groups, otherSegments) {
+            groups = groups.sort((a,b)=>a.rect.y - b.rect.y)
+            for (let index = 0; index < groups.length; index++) {
+                const group = groups[index];
+                let nextY = -1
+                if(index+1>=groups.length)
+                    nextY = page.y+page.h
+                else{
+                    const group2 = groups[index+1]
+                    nextY = group2.rect.y
+                }
+                const diff = nextY - group.rect.y 
+                if(diff<=0)
+                    continue
+                const chosenSegs = otherSegments.filter(segment=>{
+                    const diff2 = (segment.rect.y+segment.rect.h) - group.rect.y 
+                    return(
+                        diff2>0&&
+                        diff2<=diff
+                    )
+                })
+                group.addAllSegments(chosenSegs)
+            }
+        }
+        function getLvl3Grouping(groups, submits) {
+            if(submits.length<=0)
+                return 
+            const next = submits.sort((a,b)=>{
+                const con = a.rect.y - b.rect.y
+                if (con === 0)
+                    return b.rect.x - a.rect.x
+                return con
+            })[0]
+
+            const nGroup = new Group()
+            next.setGroup(nGroup)
+            nGroup.addSegment(next)
+            groups.push(nGroup)
         }
         function removeEdgeGroups(groups) {
             return groups.filter(group => {
@@ -1067,27 +1152,28 @@ function getTopGroups(floorInfo) {
             })
         }
         function sortGroups(groups) {
-            return groups.sort((a, b) => {
-                const con = a.rect.y - b.rect.y
-                if (con === 0)
-                    return b.rect.x - a.rect.x
-                return con
-            })
+            return groups.sort((a, b) => a.rect.y - b.rect.y)
         }
-        const ielements = segments.filter(element => element instanceof IElement);
-        const textElements = segments.filter(element => element instanceof TextElement);
-
+        const instructions = segments.filter(element => element instanceof Instruction);
+        const submits = segments.filter(element => element instanceof ISubmit);
+        const otherSegments = segments.filter(element => 
+            !(element instanceof Instruction)&&
+            !(element instanceof ISubmit)
+        );
         // ============ lvl1 grouping ==============
         let groups = []
-        groups = getLvl1Grouping(ielements, segments)
+        groups = getLvl1Grouping(instructions, otherSegments)
 
         // ============ lvl2 grouping ==============
-        getLvl2Grouping(groups, textElements)
+        getLvl2Grouping(groups, otherSegments)
+        
+        // ============ lvl3 grouping ==============
+        getLvl3Grouping(groups, submits)
 
         // ============ remove edge groups ==============
-        groups = removeEdgeGroups(groups)
+        // groups = removeEdgeGroups(groups)
 
-        // ============ sort groups ==============
+        // // ============ sort groups ==============
         groups = sortGroups(groups)
 
         return groups
@@ -1107,10 +1193,10 @@ function getTopGroups(floorInfo) {
 
     console.log("segments:", gSegments)
 
-    highlightSegments(gSegments)
+    // highlightSegments(gSegments)
 
-    // const gGroups = getGroups(gSegments)
-    const gGroups = []
+    const gGroups = getGroups(gSegments)
+    // const gGroups = []
 
     console.log("groups:", gGroups)
 
