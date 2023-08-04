@@ -124,7 +124,13 @@ function isValidHttpUrl(string) {
 
     return url.protocol === "http:" || url.protocol === "https:"
 }
-
+function getAllTagnames(el, tagNames = []){
+    tagNames.push(element.tagName);
+    for(let i = 0; i < element.children.length; i++){
+        getAllTagNames(element.children[i], tagNames);
+    }
+    return tagNames;
+}
 
 const ActionType = {
     field: "field",
@@ -268,8 +274,8 @@ class Rect {
         return (
             (parentRect.x <= childRect.x) &&
             (parentRect.y <= childRect.y) &&
-            (parentRect.y + parentRect.h >= childRect.y + childRect.h) &&
-            (parentRect.x + parentRect.w >= childRect.x + childRect.w)
+            (parentRect.y + parentRect.h >= childRect.y) &&
+            (parentRect.x + parentRect.w >= childRect.x)
         )
     }
 }
@@ -621,9 +627,7 @@ function getTopGroups(floorInfo) {
             this.color = "blue"
         }
         static isType(element) {
-            if (getDirectText(element))
-                return true
-            return false
+            return getDirectText(element) != null
         }
     }
     class Instruction extends TextElement{
@@ -759,7 +763,23 @@ function getTopGroups(floorInfo) {
             this.text = null
         }
         static isType(el){
+            const rect = Rect.elementToRect(el)
+            const innerText = getAllText(el)
+            const texts = el.textContent.split('\n')
+                        .map(s => s.trim())
+                        .filter(Boolean)
 
+            return (
+                (innerText === "" || texts.includes(innerText)) &&
+                texts.length > 2 &&
+                rect.h < unit * customDropdownHeight
+            )
+
+        }
+        static getPatternedChildrenText(el){
+            Array.from(el.children).map(child=>{
+                getUniqueCssPath(child)
+            })
         }
         getOptions(){
 
@@ -1001,8 +1021,8 @@ function getTopGroups(floorInfo) {
                 !group.segments.length == 1 &&
                 !group.segments.some(segment => segment instanceof ISubmit) &&
                 (
-                    group.rect.w < FLOOR_EDGE * FLOOR_MUTL ||
-                    group.rect.h < FLOOR_EDGE * FLOOR_MUTL
+                    group.rect.w < FLOOR_EDGE * FLOOR_MULT ||
+                    group.rect.h < FLOOR_EDGE * FLOOR_MULT
                 ) &&
                 (
                     group.rect.cy > bottomSide ||
@@ -1112,11 +1132,13 @@ const POS_COEFFICIENT = 10;
 const innerGroupMargin = 1.4;
 const instructionMargin = 6;
 
+const customDropdownHeight = 3
+
 const minMediaSize = 3;
 const minImageSize = 5;
 
 const FLOOR_EDGE = 18
-const FLOOR_MUTL = 4
+const FLOOR_MULT = 4
 
 // document.body.style.zoom='25%'
 
