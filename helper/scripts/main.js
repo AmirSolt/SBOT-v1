@@ -363,26 +363,7 @@ class FloorInfo {
     }
 }
 
-class Action {
-    constructor(actionType, path, optionIndex) {
-        this.actionType = actionType
-        this.path = path
-        this.optionIndex = optionIndex
-    }
-}
-class Chain {
-    constructor(text, actions) {
-        this.text = text
-        this.actions = actions
-    }
-}
-class Cable {
-    constructor(chains, isComparable) {
-        this.chains = chains
-        this.isComparable = isComparable
 
-    }
-}
 
 
 
@@ -457,12 +438,12 @@ function getTopGroups(floorInfo) {
     class Segment {
         constructor(element) {
             this.element = element
-            this.labelName = ""
-            this.verboseName = ""
-            this.color = "white"
             this.rect = Rect.elementToRect(element)
-            this.group = null
             this.path = this.getPath()
+            this.name = null
+            this.color = null
+            this.group = null
+            this.text = null
         }
         static toAvoid(el) {
             return (
@@ -506,12 +487,6 @@ function getTopGroups(floorInfo) {
         setGroup(group) {
             this.group = group
         }
-        getChatVerbose() {
-            throw new Error('==== Abstract class ====');
-        }
-        getSearchVerbose() {
-            throw new Error('==== Abstract class ====');
-        }
         getPath() {
             return getUniqueCssPath(this.element)
         }
@@ -530,23 +505,6 @@ function getTopGroups(floorInfo) {
         constructor(element) {
             super(element);
             this.color = "blue"
-            this.text = element.getAttribute("placeholder") || getDirectText(element) || ""
-        }
-        getAction(optionIndex) {
-            throw new Error('==== Abstract class ====');
-        }
-        getChatVerbose() {
-            let text = ` [input:${this.verboseName} id:${this.group.getIElementIndex(this)}] ${this.text}`
-            return text.trim()
-        }
-        getSearchVerbose() {
-            return this.text
-        }
-        getDict() {
-            return {
-                action_type: this.actionType,
-                path: this.path,
-            }
         }
         static getIElement(el) {
             const IElementClass = IElementClasses.find(IElementClass => IElementClass.isType(el))
@@ -558,18 +516,7 @@ function getTopGroups(floorInfo) {
     class MediaElement extends Segment {
         constructor(element) {
             super(element);
-            this.labelName = "Media"
-            this.verboseName = "Media"
             this.color = "cyan"
-        }
-        static isType(element) {
-            throw new Error('==== Abstract class ====');
-        }
-        getChatVerbose() {
-            return `[${this.verboseName}]`
-        }
-        getSearchVerbose() {
-            return ""
         }
         static isMinMediaSize(el) {
             const rect = Rect.elementToRect(el)
@@ -596,19 +543,7 @@ function getTopGroups(floorInfo) {
     class TextElement extends Segment {
         constructor(element) {
             super(element);
-            this.labelName = "Text"
-            this.verboseName = "Text"
             this.color = "green"
-            this.text = null
-        }
-        static isType(element) {
-            throw new Error('==== Abstract class ====');
-        }
-        getChatVerbose() {
-            return this.text
-        }
-        getSearchVerbose() {
-            return this.text
         }
         static getTextElement(el) {
             const TextClass = TextClasses.find(TextClass => TextClass.isType(el))
@@ -622,10 +557,9 @@ function getTopGroups(floorInfo) {
     class IText extends TextElement{
         constructor(element) {
             super(element);
-            this.labelName = "Text"
-            this.verboseName = "Text"
+            this.name = "Text"
             this.color = "blue"
-            this.text = getAllText(element) || getDirectText(element) || ""
+            this.text = getDirectText(element) || ""
         }
         static isType(element) {
             return getDirectText(element) !== ""
@@ -634,9 +568,9 @@ function getTopGroups(floorInfo) {
     class Instruction extends TextElement{
         constructor(element) {
             super(element);
-            this.labelName = "Instruction"
-            this.verboseName = "Instruction"
+            this.name = "Instruction"
             this.color = "yellow"
+            this.text = getDirectText(element) || ""
         }
         static isType(segments, segment) {
             if(!(segment instanceof IText))
@@ -653,13 +587,9 @@ function getTopGroups(floorInfo) {
     class ISelect extends IElement {
         constructor(element) {
             super(element);
-            this.labelName = "Select"
-            this.verboseName = "Select"
-            this.color = "red"
-            this.text = getAllText(element) || getDirectText(element) || ""
-        }
-        getAction(optionIndex) {
-            return Action(ActionType.select, this.path, null)
+            this.name = "Select"
+            this.color = "blue"
+            this.text = getAllText(element) || ""
         }
         static isType(element) {
             if (
@@ -693,11 +623,12 @@ function getTopGroups(floorInfo) {
     class IField extends IElement {
         constructor(element) {
             super(element);
-            this.labelName = "Field"
-            this.verboseName = "Field"
+            this.name = "Field"
+            this.text = element.getAttribute("placeholder") || getAllText(element) || ""
         }
-        getAction(optionIndex) {
-            return Action(ActionType.field, this.path, null)
+        getVerbose(){
+            const temp = this.text || "Input Field"
+            return "[" + temp +"]"
         }
         static isType(element) {
             if (
@@ -723,13 +654,9 @@ function getTopGroups(floorInfo) {
     class IDropdown extends IElement {
         constructor(element) {
             super(element);
-            this.labelName = "Dropdown"
-            this.verboseName = "Dropdown"
+            this.name = "Dropdown"
             this.options = this.getOptions()
-            this.text = this.options[0] || ""
-        }
-        getAction(optionIndex) {
-            return Action(ActionType.dropdown, this.path, optionIndex)
+            this.text = this.getOptions().join("\n")
         }
         static isType(element) {
             if (
@@ -743,42 +670,20 @@ function getTopGroups(floorInfo) {
             return Array.from(this.element.options)
                 .map(option => getDirectText(option))
         }
-        getDict() {
-            return {
-                action_type: this.actionType,
-                path: this.path,
-                options: this.options
-            }
-        }
-        getChatVerbose() {
-            let text = `[input:${this.verboseName} id:${this.group.getIElementIndex(this)}`
-            this.options.forEach(option => {
-                text += ` Option: ${option}`
-            })
-            text += "]\n"
-            return text.trim()
-        }
-        getSearchVerbose() {
-            let text = ""
-            this.options.forEach(option => {
-                text += ` ${option}`
-            })
-            return text
-        }
     }
     class CustomDropdown extends IElement{
         constructor(element){
             super(element);
             this.labelName = "Custom Dropdown"
             this.verboseName = "Custom Dropdown"
-            this.text = getAllText(element)
             this.options = this.getOptions()
+            this.text = this.getOptions().join("\n")
         }
         static isType(el){
             const rect = Rect.elementToRect(el)
             const innerText = getAllText(el)
             const texts = el.textContent.split('\n')
-                        .map(s => s.trim())
+                        .map(s => cleanText(s))
                         .filter(Boolean)
 
             return (
@@ -794,25 +699,24 @@ function getTopGroups(floorInfo) {
             })
         }
         getOptions(){
-            const texts = this.element.textContent.split('\n')
-                .map(s => s.trim())
-                .filter(Boolean)
-            return texts.filter(text=> text!=this.text)    
-        }
-        getAction(optionIndex){
-            // the initial action could be basic element if innerText === ""
-            // or it could be the element innerText
-            // for every other element use text to find the elemenet
+            // const visText = getAllText(this.element)
+            // const texts = this.element.textContent.split('\n')
+            //     .map(s => s.trim())
+            //     .filter(Boolean)
+            // return texts.filter(text=> text!=visText)  
+            return this.element.textContent
+                    .split('\n')
+                    .map(s => cleanText(s))
+                    .filter(Boolean)
         }
     }
     // =========
     class ISubmit extends IElement{
         constructor(element){
             super(element);
-            this.labelName = "Submit"
-            this.verboseName = "Submit"
+            this.name = "Submit"
             this.color = "red"
-            this.text = getAllText(element) || getDirectText(element) || ""
+            this.text = getAllText(element) ||  ""
         }
         static isType(segments, segment) {
             if(!(segment instanceof ISelect))
@@ -836,6 +740,10 @@ function getTopGroups(floorInfo) {
     }
     // =======================
     class IPicture extends MediaElement{
+        constructor(element){
+            super(element);
+            this.name = "Image"
+        }
         static isType(element) {
             return (
                 (
@@ -847,7 +755,10 @@ function getTopGroups(floorInfo) {
         }
     }
     class IVideo extends MediaElement{
-
+        constructor(element){
+            super(element);
+            this.name = "Video"
+        }
         static isType(element) {
             return (
                 (
@@ -858,7 +769,10 @@ function getTopGroups(floorInfo) {
         }
     }
     class IAudio extends MediaElement{
-
+        constructor(element){
+            super(element);
+            this.name = "Audio"
+        }
         static isType(element) {
             return (
                 (
@@ -869,7 +783,32 @@ function getTopGroups(floorInfo) {
         }
     }
 
-    // strategist
+    // =======================
+
+    class Director{
+        
+
+    }
+    class Action {
+        constructor(actionType, path, optionIndex) {
+            this.actionType = actionType
+            this.path = path
+            this.optionIndex = optionIndex
+        }
+    }
+    class Chain {
+        constructor(text, actions) {
+            this.text = text
+            this.actions = actions
+        }
+    }
+    class Cable {
+        constructor(chains, isComparable) {
+            this.chains = chains
+            this.isComparable = isComparable
+    
+        }
+    }
 
     class Group {
         constructor() {
@@ -906,64 +845,6 @@ function getTopGroups(floorInfo) {
             this.updateRect(segments)
         }
 
-        getChatVerbose() {
-            return this.otherSegments
-                .sort((a, b) => {
-                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
-                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
-                    if (!isYLapping) {
-                        return a.rect.y - b.rect.y
-                    }
-                    return a.rect.x - b.rect.x
-                })
-                .reduce((acc, curr, index, arr) => {
-                    let text = curr.getChatVerbose();
-                    let divider = "";
-                    if (index > 0) {
-                        const lastSegment = arr[index - 1]
-                        const isYLapping = Rect.areYBoundsOverlaping(lastSegment.rect, curr.rect);
-                        if (!isYLapping) {
-                            divider = "\n"
-                        } else {
-                            divider = " "
-                        }
-                    }
-                    return acc + divider + text;
-                }, "")
-                .trim()
-        }
-        getSearchVerbose() {
-            return this.otherSegments
-                .sort((a, b) => {
-                    // const isXLapping = Rect.areXBoundsOverlaping(a.rect, b.rect);
-                    const isYLapping = Rect.areYBoundsOverlaping(a.rect, b.rect);
-                    if (!isYLapping) {
-                        return a.rect.y - b.rect.y
-                    }
-                    return a.rect.x - b.rect.x
-                })
-                .reduce((acc, curr, index, arr) => {
-                    let text = curr.getSearchVerbose();
-                    let divider = "";
-                    if (index > 0) {
-                        divider = " "
-                    }
-                    return acc + divider + text;
-                }, "")
-                .trim()
-        }
-        getIElementsDicts() {
-            const ielements = this.otherSegments.filter(segment => segment instanceof IElement)
-            return ielements.map(ielement => ielement.getDict())
-        }
-        getIElementIndex(ielement) {
-            const ielements = this.otherSegments.filter(segment => segment instanceof IElement)
-            return ielements.findIndex(iel => iel === ielement)
-        }
-        getMediaDicts() {
-            const medias = this.otherSegments.filter(segment => segment instanceof MediaElement)
-            return medias.map(media => media.getDict())
-        }
         getID() {
             function roundToMultiple(num, mult) {
                 const remainder = num % mult;
@@ -985,14 +866,30 @@ function getTopGroups(floorInfo) {
             const h = roundToMultiple(parseInt(this.rect.h), mult);
             return `#${x}#${y}#${w}#${h}#`
         }
+        getInstructionText(){
+            return this.instructions.map(inst=>inst.text).join(" ")
+        }
+        getSearchVerbose(){
+            let text = this.getInstructionText()
+            this.otherSegments.forEach(seg=>{
+                if(seg.text!==""){
+                    if(text!==""){
+                        text +=" \n"
+                    }
+                    text += seg.text
+                }
+            })  
+            return text
+        }
+
+
         getDict() {
             return {
                 "id": this.getID(),
                 "context_path": contextPath,
-                "chat_verbose": this.getChatVerbose(),
+                "instruction": this.getInstructionText(),
                 "search_verbose": this.getSearchVerbose(),
-                "imedia": this.getMediaDicts(),
-                "instruction": null,
+                // "chat_verbose": this.getInstructionText(),
                 "cables": null,
             }
         }
