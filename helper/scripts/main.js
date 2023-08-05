@@ -435,6 +435,12 @@ function getTopGroups(floorInfo) {
 
     // throw new Error('==== Abstract class ====');
 
+    // text
+    // wire
+    // getInfo
+    // getCable
+    // getChain
+
     class Segment {
         constructor(element) {
             this.element = element
@@ -444,6 +450,7 @@ function getTopGroups(floorInfo) {
             this.color = null
             this.group = null
             this.text = null
+            this.wire = null
         }
         static toAvoid(el) {
             return (
@@ -721,14 +728,30 @@ function getTopGroups(floorInfo) {
         static isType(segments, segment) {
             if(!(segment instanceof ISelect))
                 return false
-            if(!ISubmit.hasSubmitBehaviour(segment))
+
+            const style = getComputedStyle(segment.element)
+            if(!ISubmit.hasSubmitBehaviour(segment, style))
                 return false
+
+            // check if bg is repeated
+            if(Vis.hasBG(style)){
+                const exsitsRepeatedColor = segments.some(seg=>{
+                    if(seg===segment)
+                        return false
+                    const style2 = getComputedStyle(segment.element)
+                    if(hasSubmitBehaviour(seg, style2)){
+                        return style.backgroundColor === style2.backgroundColor
+                    }
+                    return false
+                })
+                if(exsitsRepeatedColor)
+                    return false
+            }
             return true
             
         }
-        static hasSubmitBehaviour(segment){
+        static hasSubmitBehaviour(segment, style){
             const possibleSubmitText = ["submit", "continue","next","ok",">","->","→"]
-            const style = getComputedStyle(segment.element)
             return (
                 (
                     segment.text &&
@@ -785,10 +808,6 @@ function getTopGroups(floorInfo) {
 
     // =======================
 
-    class Director{
-        
-
-    }
     class Action {
         constructor(actionType, path, optionIndex) {
             this.actionType = actionType
@@ -810,6 +829,95 @@ function getTopGroups(floorInfo) {
         }
     }
 
+    class Director{
+        groupTypes = {
+            list:"list",
+            grid:"grid",
+            other:"other"
+        }
+
+
+        static getGroupType(segments){
+            if(Director.isGrid(segments))
+                return Director.groupTypes.grid
+            if(Director.isList(segments))
+                return Director.groupTypes.list
+            return Director.groupTypes.other
+        }
+        static isGrid(segments){
+        }
+        static isList(segments){
+        }
+        static cleanListSegments(segments){
+            const iselects = segments.filter(seg=> seg instanceof ISelect)
+            const iselectTexted = iselects.filter(seg=> seg.text!=="")
+            const iselectNonTexted = iselects.filter(seg=> seg.text==="")
+            if(iselectTexted.length===iselectNonTexted.length)
+                return segments.filter(seg=>iselectNonTexted.includes(seg))
+
+            const itexts = segments.filter(seg=> seg instanceof IText)
+            const usedTexts = []
+            iselectNonTexted.forEach(iselect=>{
+                const matchingText = itexts.find(itext=>
+                    Rect.isWithinMargin(iselect.rect, itext.rect, unit*innerGroupMargin, "r"))
+                iselect.text = matchingText.text
+                usedTexts.push(matchingText)
+            })
+            return segments.filter(seg=>usedTexts.includes(seg))
+        }
+
+        static isGroupDead(group, groupType){
+            // if(groupType === Director.groupTypes.
+            throw new Error('==== Not implemented ====');
+        }
+        static getCables(group, groupType){
+            const segments = group.otherSegments
+            switch (groupType) {
+                case Director.groupTypes.other:
+                    return segments.map(seg=>seg.getCable())
+                case Director.groupTypes.lines:
+                    return new Cable(
+                        chains = cleanListSegments(segments)
+                            .filter(seg=>seg instanceof IElement)
+                            .map(seg=>seg.getChain())
+                            .filter(Boolean),
+                        isComparable = true
+                    )
+                case Director.groupTypes.grid:
+                    throw new Error('==== Not implemented ====');
+                default:
+                    throw new Error('==== Switch case no match ===='+groupType);
+            }
+        }
+        static getSegmentsSearchTexts(group, groupType){
+            const segments = group.otherSegments
+            switch (groupType) {
+                case Director.groupTypes.other:
+                    return segments.map(seg=>seg.text).filter(Boolean)
+                case Director.groupTypes.lines:
+                    return segments.map(seg=>seg.text).filter(Boolean)
+                case Director.groupTypes.grid:
+                    throw new Error('==== Not implemented ====');
+                default:
+                    throw new Error('==== Switch case no match ===='+groupType);
+            }
+        }
+        static getSegmentsChatTexts(group, groupType){
+            const segments = group.otherSegments
+            switch (groupType) {
+                case Director.groupTypes.other:
+                    return segments.map(seg=>seg.getInfo())
+                case Director.groupTypes.lines:
+                    return cleanListSegments(segments).map(seg=>seg.getInfo())
+                case Director.groupTypes.grid:
+                    throw new Error('==== Not implemented ====');
+                default:
+                    throw new Error('==== Switch case no match ===='+groupType);
+            }
+        }
+
+    }
+
     class Group {
         constructor() {
             this.rect = null
@@ -821,15 +929,6 @@ function getTopGroups(floorInfo) {
             if(this.rect!=null)
                 rects.push(this.rect)
             this.rect = Rect.combineRects(rects)
-        }
-        isInstruction(textElement) {
-            if (
-                textElement.group == null &&
-                Rect.isWithinMargin(this.rect, textElement.rect, instructionMargin * unit, "t")
-            ) {
-                return true
-            }
-            return false
         }
         addInstruction(instruction){
             this.instructions.push(instruction)
@@ -881,7 +980,9 @@ function getTopGroups(floorInfo) {
             })  
             return text
         }
+        getChatVerbose(){
 
+        }
 
         getDict() {
             return {
@@ -889,7 +990,7 @@ function getTopGroups(floorInfo) {
                 "context_path": contextPath,
                 "instruction": this.getInstructionText(),
                 "search_verbose": this.getSearchVerbose(),
-                // "chat_verbose": this.getInstructionText(),
+                "chat_verbose": this.getChatVerbose(),
                 "cables": null,
             }
         }
@@ -1112,8 +1213,7 @@ const HIERARCHY_COEFFICIENT = 10;
 const AREA_COEFFICIENT = 10;
 const POS_COEFFICIENT = 10;
 
-const innerGroupMargin = 1.4;
-const instructionMargin = 6;
+const innerGroupMargin = 2;
 
 const customDropdownHeight = 3
 
