@@ -57,21 +57,21 @@ class Profile:
         if utils.does_file_exist(self.perm_memory_path): 
             self.perm_memory = utils.read_file(self.perm_memory_path)
         
-        if not self.perm_memory:
-            if utils.does_file_exist(self.profile_seed_path):
-                self.__load_perm_memory()
+        if utils.does_file_exist(self.profile_seed_path):
+            self.__load_perm_memory(not self.perm_memory)
+            if not self.perm_memory:
                 utils.write_file(self.perm_memory_path, self.perm_memory)
-            else:
-                raise Exception(f"======= Profile info does not exist path: {self.profile_seed_path}")
+        else:
+            raise Exception(f"======= Profile info does not exist path: {self.profile_seed_path}")
             
         
         
 
     def print_info(self):
         print("********************************************")
-        print(f"Email: {self.id}")
+        print(f"id: {self.id}")
         print(f"Email: {self.email}")
-        print(f"Email: {self.password}")
+        print(f"password: {self.password}")
         
         # print(f"first name: {self.get_memory_by_question('first name')}")
         # print(f"last name: {self.get_memory_by_question('last name')}")
@@ -135,11 +135,13 @@ class Profile:
         self.email = seed["email"]
         self.password = seed["password"]
         
-    def __load_perm_memory(self):
+    def __load_perm_memory(self, do_load_info:bool):
         profile_seed = utils.read_file(self.profile_seed_path)
         self.set_from_seed_dict(profile_seed)
-        for value in profile_seed["info"]:
-            self.__add_to_perm_memory(value)
+        if do_load_info:
+            for value in profile_seed["info"]:
+                self.__add_to_perm_memory(value)
+            
         
     
     def __add_to_perm_memory(self, value:str):

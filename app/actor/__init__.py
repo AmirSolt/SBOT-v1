@@ -1,7 +1,7 @@
 
 from app.browser import Browser
 from app.profile import Profile
-from d_types import GroupAnswer, ActionType
+from d_types import GroupAnswer, ActionType, Chain, Group
 from funcs import AI, pauser
 
 
@@ -27,19 +27,19 @@ class Actor:
         self.browser.click_element(".login-popup button", "")
         
 
-    def solve_input_answer(self, group_answer:GroupAnswer):
+    def solve_chains(self, group:Group, chains:list[Chain]):
         
-        for chain in group_answer.chains:
+        for chain in chains:
             
             for action in chain.actions:
         
                 match action.action_type:
                     case ActionType.field:
-                        self.solve_field(action.path, chain.answer, group_answer.group.context_path)
+                        self.solve_field(action.path, chain.answer, group.context_path)
                     case ActionType.select:
-                        self.solve_select_type(action.path, group_answer.group.context_path)
+                        self.solve_select_type(action.path, group.context_path)
                     case ActionType.dropdown:
-                        self.solve_dropdown_by_index(action.path, action.option_index, group_answer.group.context_path)
+                        self.solve_dropdown_by_index(action.path, action.option_index, group.context_path)
 
 
     def solve_field(self, element_path:str, answer:str, context_path:str):

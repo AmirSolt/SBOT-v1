@@ -141,6 +141,7 @@ const GroupType = {
     list:"list",
     grid:"grid",
     submit:"submit",
+    media:"media",
     other:"other",
 }
 
@@ -495,6 +496,12 @@ function getTopGroups(floorInfo) {
         }
         getInfo(){
             return ""
+        }
+        getCable(){
+            return null
+        }
+        getChain(){
+            return null
         }
         static toAvoid(el) {
             return (
@@ -988,9 +995,15 @@ function getTopGroups(floorInfo) {
                 return GroupType.grid
             if(Director.isList(group))
                 return GroupType.list
+            if(Director.isMedia(group))
+                return GroupType.media
             if(Director.isSubmit(group))
                 return GroupType.submit
             return GroupType.other
+        }
+        static isMedia(group){
+            const segments = group.otherSegments
+            return segments.some(seg=>seg instanceof MediaElement)
         }
         static isSubmit(group){
             const segments = group.otherSegments
@@ -1025,13 +1038,21 @@ function getTopGroups(floorInfo) {
         }
 
         static isDead(group){
-            return group.type!=GroupType.submit && Director.isGroupOnEdge(group)
+            return (
+                group.otherSegments.length === 0 ||
+                (
+                    group.type!=GroupType.submit &&
+                    Director.isGroupOnEdge(group)
+                )
+            )
         }
         static getCables(group){
             const segments = group.otherSegments
             switch (group.type) {
                 case GroupType.other:
                     return segments.map(seg=>seg.getCable())
+                case GroupType.media:
+                    return []
                 case GroupType.list:
                     return [new Cable({
                         chains : Director.cleanListSegments(segments)
@@ -1053,6 +1074,8 @@ function getTopGroups(floorInfo) {
             switch (group.type) {
                 case GroupType.other:
                     return segments.map(seg=>seg.text).filter(Boolean)
+                case GroupType.media:
+                    return []
                 case GroupType.list:
                     return segments.map(seg=>seg.text).filter(Boolean)
                 case GroupType.submit:
@@ -1068,6 +1091,8 @@ function getTopGroups(floorInfo) {
             switch (group.type) {
                 case GroupType.other:
                     return segments.map(seg=>seg.getInfo()).filter(Boolean)
+                case GroupType.media:
+                    return []
                 case GroupType.list:
                     return Director.cleanListSegments(segments).map(seg=>seg.getInfo()).filter(Boolean)
                 case GroupType.submit:
@@ -1184,6 +1209,7 @@ function getTopGroups(floorInfo) {
                 "instruction": this.getInstructionText(),
                 "search_verbose": this.getSearchVerbose(),
                 "chat_verbose": this.getChatVerbose(),
+                "type": this.type,
                 "cables": this.getCables(),
             }
         }
@@ -1377,14 +1403,14 @@ function getTopGroups(floorInfo) {
 
     console.log("segments:", gSegments)
 
-    // highlightSegments(gSegments)
+    highlightSegments(gSegments)
 
     const gGroups = getGroups(gSegments)
     // const gGroups = []
 
     console.log("groups:", gGroups)
 
-    highlightGroups(gGroups)
+    // highlightGroups(gGroups)
 
     if (gGroups.length == 0)
         return null

@@ -9,7 +9,12 @@ class ActionType:
     select = "select"
     dropdown = "dropdown"
 
-
+class GroupType:
+    list="list"
+    grid="grid"
+    submit="submit"
+    media="media"
+    other="other"
 
 
 class Action:
@@ -27,6 +32,7 @@ class Chain:
         self.text:str|None = chain.get("text")
         self.answer:str|None = None
         self.actions:list[Action] = [Action(action) for action in chain["actions"]]
+        self.click_only = all(action.action_type == ActionType.select for action in self.actions)
     
     def set_answer(self, answer):
         self.answer = answer
@@ -60,8 +66,11 @@ class Group:
         self.search_verbose=parsed_group["search_verbose"]
         self.chat_verbose=parsed_group["chat_verbose"]
         
-        self.is_media_group=parsed_group["is_media_group"]
+        self.type=parsed_group["type"]
         self.cables:list[Cable] = [Cable(cable) for cable in parsed_group["cables"]]
+        
+    def get_all_chains(self):
+        return [chain for chain in [cable.chains for cable in self.cables]]
         
     def __repr__(self):
         return f"\n{self.instruction=}\n{self.cables=}"

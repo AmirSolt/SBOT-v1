@@ -102,7 +102,7 @@ class Worker:
             return True
         
         if self.state.is_group_single_select(group):
-            self.actor.solve_select_type(group.ielements[0].path, group.context_path)
+            self.actor.solve_chains(group, group.get_all_chains())
             return True
         
         context = self.profile.get_context(group.search_verbose)
@@ -121,7 +121,7 @@ class Worker:
             print("group_answer:",group_answer)
             self.actor.help("AI answer is not valid")
         else:
-            self.actor.solve_input_answer(group_answer)
+            self.actor.solve_chains(group, group_answer.chains)
             for answer_line in group_answer.answer_lines:
                 self.profile.add_to_survey_memorys(f"{group.instruction}:  {answer_line}")
 

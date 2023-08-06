@@ -1,6 +1,6 @@
 
 from ..browser import Browser
-from d_types import GroupAnswer, Group, ActionType
+from d_types import GroupAnswer, Group, ActionType, GroupType, Chain
 from helper import config
 import re
 import yarl
@@ -34,16 +34,22 @@ class State:
         return ""
 
     def is_group_solvable(self, group:Group):
-        if group.is_media_group:
+        if group.type == GroupType.media:
             return False
-        if len(group.ielements) == 0:
+        if len(group.cables) == 0:
             return False
         return True
 
     def is_group_single_select(self, group:Group):
-        if len(group.ielements) != 1:
-            return False
-        return group.ielements[0].action_type == ActionType.select
+        
+        if group.type == GroupType.submit:
+            return True
+        
+        chains:list[Chain] = group.get_all_chains()
+        if len(chains) == 1 and chains[0].click_only:
+            return True
+        
+        return False
 
     def is_ai_answer_valid(self, group_answer:GroupAnswer):
         return group_answer.is_answer_valid()
