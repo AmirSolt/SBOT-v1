@@ -845,8 +845,10 @@ function getTopGroups(floorInfo) {
             return Director.groupTypes.other
         }
         static isGrid(segments){
+            return false
         }
         static isList(segments){
+            return segments.filter(seg=>seg instanceof ISelect).length > 1
         }
         static cleanListSegments(segments){
             const iselects = segments.filter(seg=> seg instanceof ISelect)
@@ -866,9 +868,8 @@ function getTopGroups(floorInfo) {
             return segments.filter(seg=>usedTexts.includes(seg))
         }
 
-        static isGroupDead(group, groupType){
-            // if(groupType === Director.groupTypes.
-            throw new Error('==== Not implemented ====');
+        static isDead(group, groupType){
+            return Director.isGroupOnEdge(group);
         }
         static getCables(group, groupType){
             const segments = group.otherSegments
@@ -916,6 +917,24 @@ function getTopGroups(floorInfo) {
             }
         }
 
+        static isGroupOnEdge(group) {
+            // let leftSide = FLOOR_EDGE * unit;
+            let topSide = FLOOR_EDGE * unit;
+            // let rightSide = page.w - leftSide;
+            let bottomSide = page.h - topSide;
+            return (
+                !group.segments.length == 1 &&
+                !group.segments.some(segment => segment instanceof ISubmit) &&
+                (
+                    group.rect.w < FLOOR_EDGE * FLOOR_MULT ||
+                    group.rect.h < FLOOR_EDGE * FLOOR_MULT
+                ) &&
+                (
+                    group.rect.cy > bottomSide ||
+                    group.rect.cy < topSide
+                )
+            )
+        }
     }
 
     class Group {
@@ -923,6 +942,7 @@ function getTopGroups(floorInfo) {
             this.rect = null
             this.instructions = []
             this.otherSegments = []
+            this.isDead = false
         }
         updateRect(segments) {
             const rects = segments.map(seg=>seg.rect)
@@ -1049,25 +1069,7 @@ function getTopGroups(floorInfo) {
 
     // ====================== Grouping ==========================
     function getGroups(segments) {
-        function isRectOnEdge(group) {
-            // let leftSide = FLOOR_EDGE * unit;
-            let topSide = FLOOR_EDGE * unit;
-            // let rightSide = page.w - leftSide;
-            let bottomSide = page.h - topSide;
-            return (
-                !group.segments.length == 1 &&
-                !group.segments.some(segment => segment instanceof ISubmit) &&
-                (
-                    group.rect.w < FLOOR_EDGE * FLOOR_MULT ||
-                    group.rect.h < FLOOR_EDGE * FLOOR_MULT
-                ) &&
-                (
-                    group.rect.cy > bottomSide ||
-                    group.rect.cy < topSide
-                )
-            )
 
-        }
         function getLvl1Grouping(instructions, otherSegments) {
             function isSegInBetween(otherSegments, instruction, diff){
                 return otherSegments.some(segment=>{
@@ -1144,10 +1146,8 @@ function getTopGroups(floorInfo) {
             nGroup.addSegment(next)
             groups.push(nGroup)
         }
-        function removeEdgeGroups(groups) {
-            return groups.filter(group => {
-                return !isRectOnEdge(group);
-            })
+        function cleanGroups(groups){
+            return groups.filter(group=>!group.isDead)
         }
         function sortGroups(groups) {
             return groups.sort((a, b) => a.rect.y - b.rect.y)
@@ -1169,7 +1169,7 @@ function getTopGroups(floorInfo) {
         getLvl3Grouping(groups, submits)
 
         // ============ remove edge groups ==============
-        // groups = removeEdgeGroups(groups)
+        groups = cleanGroups(groups)
 
         // // ============ sort groups ==============
         groups = sortGroups(groups)
