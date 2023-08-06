@@ -137,6 +137,12 @@ const ActionType = {
     select: "select",
     dropdown: "dropdown",
 }
+const GroupType = {
+    list:"list",
+    grid:"grid",
+    submit:"submit",
+    other:"other",
+}
 
 class Vis {
     static isSpatial(style, rect) {
@@ -435,12 +441,47 @@ function getTopGroups(floorInfo) {
 
     // throw new Error('==== Abstract class ====');
 
-    // text
-    // wire
-    // getInfo
-    // getCable
-    // getChain
 
+    class Action {
+        constructor({actionType, path, optionIndex}) {
+            this.actionType = actionType
+            this.path = path
+            this.optionIndex = optionIndex
+        }
+        getDict(){
+            return{
+                actionType:this.actionType,
+                path:this.path,
+                optionIndex:this.optionIndex,
+            }
+        }
+    }
+    class Chain {
+        constructor({text, actions}) {
+            this.text = text
+            this.actions = actions
+        }
+        getDict(){
+            return{
+                text:this.text,
+                actions:this.actions.map(action=>action.getDict()),
+            }
+        }
+    }
+    class Cable {
+        constructor({chains, isComparable}) {
+            this.chains = chains
+            this.isComparable = isComparable
+        }
+        getDict(){
+            return{
+                chains:this.chains.map(chain=>chain.getDict()),
+                isComparable:this.isComparable,
+            }
+        }
+    }
+
+    // =======================
     class Segment {
         constructor(element) {
             this.element = element
@@ -451,6 +492,9 @@ function getTopGroups(floorInfo) {
             this.group = null
             this.text = null
             this.wire = null
+        }
+        getInfo(){
+            return ""
         }
         static toAvoid(el) {
             return (
@@ -524,6 +568,11 @@ function getTopGroups(floorInfo) {
         constructor(element) {
             super(element);
             this.color = "cyan"
+            this.wire = ""
+            this.text = ""
+        }
+        getInfo(){
+            return ""
         }
         static isMinMediaSize(el) {
             const rect = Rect.elementToRect(el)
@@ -551,6 +600,10 @@ function getTopGroups(floorInfo) {
         constructor(element) {
             super(element);
             this.color = "green"
+            this.wire = ""
+        }
+        getInfo(){
+            return ""
         }
         static getTextElement(el) {
             const TextClass = TextClasses.find(TextClass => TextClass.isType(el))
@@ -596,7 +649,31 @@ function getTopGroups(floorInfo) {
             super(element);
             this.name = "Select"
             this.color = "blue"
+            this.wire = "[Option]"
             this.text = getAllText(element) || ""
+        }
+        getChain(){
+            const action = new Action({
+                actionType:ActionType.select,
+                path:this.path,
+                optionIndex:-1,
+            })
+            return new Chain({text:this.text, actions:[action]})
+        }
+        getCable(){
+            const action = new Action({
+                actionType:ActionType.select,
+                path:this.path,
+                optionIndex:-1,
+            })
+            const chain = new Chain({text:this.text, actions:[action]})
+            return new Cable({
+                chains : [chain],
+                isComparable:false,
+            })
+        }
+        getInfo(){
+            return this.wire + " " + this.text
         }
         static isType(element) {
             if (
@@ -631,11 +708,23 @@ function getTopGroups(floorInfo) {
         constructor(element) {
             super(element);
             this.name = "Field"
+            this.wire = "[Input Field]"
             this.text = element.getAttribute("placeholder") || getAllText(element) || ""
         }
-        getVerbose(){
-            const temp = this.text || "Input Field"
-            return "[" + temp +"]"
+        getCable(){
+            const action = new Action({
+                actionType:ActionType.field,
+                path:this.path,
+                optionIndex:-1,
+            })
+            const chain = new Chain({text:this.text, actions:[action]})
+            return new Cable({
+                chains : [chain],
+                isComparable:false,
+            })
+        }
+        getInfo(){
+            return this.wire + " " + this.text
         }
         static isType(element) {
             if (
@@ -662,8 +751,26 @@ function getTopGroups(floorInfo) {
         constructor(element) {
             super(element);
             this.name = "Dropdown"
+            this.wire = "[Option]"
             this.options = this.getOptions()
             this.text = this.getOptions().join("\n")
+        }
+        getCable(){
+            const chains = this.options.map((opt,i)=>{
+                const action = new Action({
+                    actionType:ActionType.dropdown,
+                    path:this.path,
+                    optionIndex:i,
+                })
+                return new Chain({text:opt, actions:[action]})
+            })
+            return new Cable({
+                chains : chains,
+                isComparable:true,
+            })
+        }
+        getInfo(){
+            return this.options.map(opt=> this.wire+" "+opt)
         }
         static isType(element) {
             if (
@@ -683,8 +790,31 @@ function getTopGroups(floorInfo) {
             super(element);
             this.labelName = "Custom Dropdown"
             this.verboseName = "Custom Dropdown"
+            this.wire = "[Option]"
             this.options = this.getOptions()
             this.text = this.getOptions().join("\n")
+        }
+        getCable(){
+            const chains = this.options.map((opt,i)=>{
+                const action0 = new Action({
+                    actionType:ActionType.select,
+                    path:this.path,
+                    optionIndex:-1,
+                })
+                const action1 = new Action({
+                    actionType:ActionType.select,
+                    path:CustomDropdown.getOptionPathByText(this.element, opt),
+                    optionIndex:-1,
+                })
+                return new Chain({text:opt, actions:[action0, action1]})
+            })
+            return new Cable({
+                chains : chains,
+                isComparable:true,
+            })
+        }
+        getInfo(){
+            return this.options.map(opt=> this.wire+" "+opt)
         }
         static isType(el){
             const rect = Rect.elementToRect(el)
@@ -716,6 +846,30 @@ function getTopGroups(floorInfo) {
                     .map(s => cleanText(s))
                     .filter(Boolean)
         }
+        static getOptionPathByText(parent, text){
+            const els = CustomDropdown.getElementsWithText(parent, text);
+            if(els.length<=0)
+                throw new Error('==== Could not find Custom Dropdown by Text ====');
+            return getUniqueCssPath(els[0])
+        }
+        static getElementsWithText(parent, text) {
+            let foundElements = [];
+          
+            function search(element) {
+                
+                 if (getDirectText(element) === text) {
+                       foundElements.push(element);
+                 } else {
+                      Array.from(element.children).forEach(child=>{
+                        search(child)
+                      })
+                 }
+            }
+          
+            search(parent);
+          
+            return foundElements;
+        }
     }
     // =========
     class ISubmit extends IElement{
@@ -723,7 +877,20 @@ function getTopGroups(floorInfo) {
             super(element);
             this.name = "Submit"
             this.color = "red"
+            this.wire = ""
             this.text = getAllText(element) ||  ""
+        }
+        getCable(){
+            const action = new Action({
+                actionType:ActionType.select,
+                path:this.path,
+                optionIndex:-1,
+            })
+            const chain = new Chain({text:this.text, actions:[action]})
+            return new Cable({
+                chains : [chain],
+                isComparable:false,
+            })
         }
         static isType(segments, segment) {
             if(!(segment instanceof ISelect))
@@ -738,8 +905,14 @@ function getTopGroups(floorInfo) {
                 const exsitsRepeatedColor = segments.some(seg=>{
                     if(seg===segment)
                         return false
-                    const style2 = getComputedStyle(segment.element)
-                    if(hasSubmitBehaviour(seg, style2)){
+                    const style2 = getComputedStyle(seg.element)
+                    if(
+                        ISubmit.hasSubmitBehaviour(seg, style2)&&
+                            (
+                                seg.rect.x == segment.rect.x ||
+                                seg.rect.y == segment.rect.y 
+                            )
+                        ){
                         return style.backgroundColor === style2.backgroundColor
                     }
                     return false
@@ -748,7 +921,6 @@ function getTopGroups(floorInfo) {
                     return false
             }
             return true
-            
         }
         static hasSubmitBehaviour(segment, style){
             const possibleSubmitText = ["submit", "continue","next","ok",">","->","→"]
@@ -808,54 +980,37 @@ function getTopGroups(floorInfo) {
 
     // =======================
 
-    class Action {
-        constructor(actionType, path, optionIndex) {
-            this.actionType = actionType
-            this.path = path
-            this.optionIndex = optionIndex
-        }
-    }
-    class Chain {
-        constructor(text, actions) {
-            this.text = text
-            this.actions = actions
-        }
-    }
-    class Cable {
-        constructor(chains, isComparable) {
-            this.chains = chains
-            this.isComparable = isComparable
-    
-        }
-    }
 
     class Director{
-        groupTypes = {
-            list:"list",
-            grid:"grid",
-            other:"other"
+        
+        static getGroupType(group){
+            if(Director.isGrid(group))
+                return GroupType.grid
+            if(Director.isList(group))
+                return GroupType.list
+            if(Director.isSubmit(group))
+                return GroupType.submit
+            return GroupType.other
         }
-
-
-        static getGroupType(segments){
-            if(Director.isGrid(segments))
-                return Director.groupTypes.grid
-            if(Director.isList(segments))
-                return Director.groupTypes.list
-            return Director.groupTypes.other
+        static isSubmit(group){
+            const segments = group.otherSegments
+            return segments.length === 1 && segments[0] instanceof ISubmit
         }
-        static isGrid(segments){
+        static isGrid(group){
             return false
         }
-        static isList(segments){
-            return segments.filter(seg=>seg instanceof ISelect).length > 1
+        static isList(group){
+            const segments = group.otherSegments
+            return segments.filter(seg=>seg instanceof ISelect).length > 1 &&
+                 !segments.some(seg=> seg instanceof IElement && !(seg instanceof ISelect))
         }
         static cleanListSegments(segments){
             const iselects = segments.filter(seg=> seg instanceof ISelect)
             const iselectTexted = iselects.filter(seg=> seg.text!=="")
             const iselectNonTexted = iselects.filter(seg=> seg.text==="")
-            if(iselectTexted.length===iselectNonTexted.length)
-                return segments.filter(seg=>iselectNonTexted.includes(seg))
+
+            if(iselectTexted.length>1 || iselectTexted.length===iselectNonTexted.length)
+                return iselectTexted
 
             const itexts = segments.filter(seg=> seg instanceof IText)
             const usedTexts = []
@@ -865,55 +1020,62 @@ function getTopGroups(floorInfo) {
                 iselect.text = matchingText.text
                 usedTexts.push(matchingText)
             })
-            return segments.filter(seg=>usedTexts.includes(seg))
+            // return iselectNonTexted
+            return segments.filter(seg=>!usedTexts.some(seg2 => seg2 === seg))
         }
 
-        static isDead(group, groupType){
-            return Director.isGroupOnEdge(group);
+        static isDead(group){
+            return group.type!=GroupType.submit && Director.isGroupOnEdge(group)
         }
-        static getCables(group, groupType){
+        static getCables(group){
             const segments = group.otherSegments
-            switch (groupType) {
-                case Director.groupTypes.other:
+            switch (group.type) {
+                case GroupType.other:
                     return segments.map(seg=>seg.getCable())
-                case Director.groupTypes.lines:
-                    return new Cable(
-                        chains = cleanListSegments(segments)
-                            .filter(seg=>seg instanceof IElement)
+                case GroupType.list:
+                    return [new Cable({
+                        chains : Director.cleanListSegments(segments)
+                            .filter(seg=>seg instanceof ISelect)
                             .map(seg=>seg.getChain())
                             .filter(Boolean),
-                        isComparable = true
-                    )
-                case Director.groupTypes.grid:
+                        isComparable : true
+                    })]
+                case GroupType.submit:
+                    return segments.map(seg=>seg.getCable())
+                case GroupType.grid:
                     throw new Error('==== Not implemented ====');
                 default:
-                    throw new Error('==== Switch case no match ===='+groupType);
+                    throw new Error('==== Switch case no match ====: '+group.type);
             }
         }
-        static getSegmentsSearchTexts(group, groupType){
+        static getSegmentsSearchTexts(group){
             const segments = group.otherSegments
-            switch (groupType) {
-                case Director.groupTypes.other:
+            switch (group.type) {
+                case GroupType.other:
                     return segments.map(seg=>seg.text).filter(Boolean)
-                case Director.groupTypes.lines:
+                case GroupType.list:
                     return segments.map(seg=>seg.text).filter(Boolean)
-                case Director.groupTypes.grid:
+                case GroupType.submit:
+                    return segments.map(seg=>seg.text).filter(Boolean)
+                case GroupType.grid:
                     throw new Error('==== Not implemented ====');
                 default:
-                    throw new Error('==== Switch case no match ===='+groupType);
+                    throw new Error('==== Switch case no match ====: '+group.type);
             }
         }
-        static getSegmentsChatTexts(group, groupType){
+        static getSegmentsChatTexts(group){
             const segments = group.otherSegments
-            switch (groupType) {
-                case Director.groupTypes.other:
-                    return segments.map(seg=>seg.getInfo())
-                case Director.groupTypes.lines:
-                    return cleanListSegments(segments).map(seg=>seg.getInfo())
-                case Director.groupTypes.grid:
+            switch (group.type) {
+                case GroupType.other:
+                    return segments.map(seg=>seg.getInfo()).filter(Boolean)
+                case GroupType.list:
+                    return Director.cleanListSegments(segments).map(seg=>seg.getInfo()).filter(Boolean)
+                case GroupType.submit:
+                    return segments.map(seg=>seg.getInfo()).filter(Boolean)
+                case GroupType.grid:
                     throw new Error('==== Not implemented ====');
                 default:
-                    throw new Error('==== Switch case no match ===='+groupType);
+                    throw new Error('==== Switch case no match ====: '+group.type);
             }
         }
 
@@ -923,8 +1085,6 @@ function getTopGroups(floorInfo) {
             // let rightSide = page.w - leftSide;
             let bottomSide = page.h - topSide;
             return (
-                !group.segments.length == 1 &&
-                !group.segments.some(segment => segment instanceof ISubmit) &&
                 (
                     group.rect.w < FLOOR_EDGE * FLOOR_MULT ||
                     group.rect.h < FLOOR_EDGE * FLOOR_MULT
@@ -943,6 +1103,7 @@ function getTopGroups(floorInfo) {
             this.instructions = []
             this.otherSegments = []
             this.isDead = false
+            this.type = GroupType.other
         }
         updateRect(segments) {
             const rects = segments.map(seg=>seg.rect)
@@ -962,6 +1123,10 @@ function getTopGroups(floorInfo) {
         addAllSegments(segments) {
             this.otherSegments.push(...segments)
             this.updateRect(segments)
+        }
+        update(){
+            this.type = Director.getGroupType(this)
+            this.isDead = Director.isDead(this)
         }
 
         getID() {
@@ -988,20 +1153,28 @@ function getTopGroups(floorInfo) {
         getInstructionText(){
             return this.instructions.map(inst=>inst.text).join(" ")
         }
-        getSearchVerbose(){
-            let text = this.getInstructionText()
-            this.otherSegments.forEach(seg=>{
-                if(seg.text!==""){
-                    if(text!==""){
-                        text +=" \n"
-                    }
-                    text += seg.text
+        static extendText(text, toAddTexts){
+            toAddTexts.forEach(toAdd=>{
+                if(text!==""){
+                    text +=" \n"
                 }
-            })  
+                text += toAdd
+            }) 
             return text
         }
+        getSearchVerbose(){
+            let text = this.getInstructionText()
+            const segTexts = Director.getSegmentsSearchTexts(this)
+            return Group.extendText(text, segTexts)
+        }
         getChatVerbose(){
-
+            let text = this.getInstructionText()
+            const segTexts = Director.getSegmentsChatTexts(this)
+            return Group.extendText(text, segTexts)
+        }
+        getCables(){
+            const cables = Director.getCables(this)
+            return cables.map(cable=>cable.getDict())
         }
 
         getDict() {
@@ -1011,7 +1184,7 @@ function getTopGroups(floorInfo) {
                 "instruction": this.getInstructionText(),
                 "search_verbose": this.getSearchVerbose(),
                 "chat_verbose": this.getChatVerbose(),
-                "cables": null,
+                "cables": this.getCables(),
             }
         }
     }
@@ -1023,6 +1196,10 @@ function getTopGroups(floorInfo) {
     }
     function highlightGroups(groups) {
         groups.forEach((group, i) => {
+            if(group.type === GroupType.submit){
+                highlight(group.rect, "#00FFFF", ``)
+                return
+            }
             if (i == 0) {
                 highlight(group.rect, "#09E912", ``)
             } else if (i == groups.length - 1) {
@@ -1146,6 +1323,9 @@ function getTopGroups(floorInfo) {
             nGroup.addSegment(next)
             groups.push(nGroup)
         }
+        function directorUpdate(groups){
+            groups.forEach(group=>group.update())
+        }
         function cleanGroups(groups){
             return groups.filter(group=>!group.isDead)
         }
@@ -1158,6 +1338,9 @@ function getTopGroups(floorInfo) {
             !(element instanceof Instruction)&&
             !(element instanceof ISubmit)
         );
+
+        console.log("submits:",submits)
+
         // ============ lvl1 grouping ==============
         let groups = []
         groups = getLvl1Grouping(instructions, otherSegments)
@@ -1167,6 +1350,9 @@ function getTopGroups(floorInfo) {
         
         // ============ lvl3 grouping ==============
         getLvl3Grouping(groups, submits)
+
+        // ============ update ==============
+        directorUpdate(groups)
 
         // ============ remove edge groups ==============
         groups = cleanGroups(groups)
@@ -1220,7 +1406,7 @@ const customDropdownHeight = 3
 const minMediaSize = 3;
 const minImageSize = 5;
 
-const FLOOR_EDGE = 18
+const FLOOR_EDGE = 4
 const FLOOR_MULT = 4
 
 // document.body.style.zoom='25%'

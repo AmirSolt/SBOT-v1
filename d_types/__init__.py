@@ -15,7 +15,6 @@ class ActionType:
 class Action:
     def __init__(self, e:dict) -> None:
         self.action_type:str = e["action_type"]
-        self.context_path:str = e["context_path"]
         self.path:str = e["path"]
         self.option_index:int|None = e.get("option_index")
 

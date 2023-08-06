@@ -1,6 +1,6 @@
 
 from ..browser import Browser
-from d_types import GroupAnswer, Group, IElement, ActionType
+from d_types import GroupAnswer, Group, ActionType
 from helper import config
 import re
 import yarl
