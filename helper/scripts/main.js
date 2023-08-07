@@ -1419,7 +1419,7 @@ function getTopGroups(floorInfo) {
 
     console.log("segments:", gSegments)
 
-    // highlightSegments(gSegments)
+    highlightSegments(gSegments)
 
     const gGroups = getGroups(gSegments)
     // const gGroups = []

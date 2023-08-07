@@ -97,33 +97,33 @@ class Worker:
             self.actor.help("No group")
             return True
         
-        if not self.state.is_group_solvable(group):
-            self.actor.help("Group not solvable")
-            return True
+        # if not self.state.is_group_solvable(group):
+        #     self.actor.help("Group not solvable")
+        #     return True
         
-        if self.state.is_group_single_select(group):
-            self.actor.solve_chains(group, group.get_all_chains())
-            return True
+        # if self.state.is_group_single_select(group):
+        #     self.actor.solve_chains(group, group.get_all_chains())
+        #     return True
         
-        context = self.profile.get_context(group.search_verbose)
-        answer = AI.answer_parsed_group(group.chat_verbose, self.worker_id, context)
-        group_answer = GroupAnswer(group, answer)
+        # context = self.profile.get_context(group.search_verbose)
+        # answer = AI.answer_parsed_group(group.chat_verbose, self.worker_id, context)
+        # group_answer = GroupAnswer(group, answer)
         
-        print("=============")
-        print("context:\n",context)
-        print("=============")
-        print("verbose:\n",group.chat_verbose)
-        print("=============")
-        print("answer:\n",answer)
-        print("=============")
+        # print("=============")
+        # print("context:\n",context)
+        # print("=============")
+        # print("verbose:\n",group.chat_verbose)
+        # print("=============")
+        # print("answer:\n",answer)
+        # print("=============")
         
-        if not self.state.is_ai_answer_valid(group_answer):
-            print("group_answer:",group_answer)
-            self.actor.help("AI answer is not valid")
-        else:
-            self.actor.solve_chains(group, group_answer.chains)
-            for answer_line in group_answer.answer_lines:
-                self.profile.add_to_survey_memorys(f"{group.instruction}:  {answer_line}")
+        # if not self.state.is_ai_answer_valid(group_answer):
+        #     print("group_answer:",group_answer)
+        #     self.actor.help("AI answer is not valid")
+        # else:
+        #     self.actor.solve_chains(group, group_answer.chains)
+        #     for answer_line in group_answer.answer_lines:
+        #         self.profile.add_to_survey_memorys(f"{group.instruction}:  {answer_line}")
 
         return True
         
