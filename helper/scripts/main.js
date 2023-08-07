@@ -457,9 +457,9 @@ function getTopGroups(floorInfo) {
         }
         getDict(){
             return{
-                actionType:this.actionType,
+                action_type:this.actionType,
                 path:this.path,
-                optionIndex:this.optionIndex,
+                option_index:this.optionIndex,
             }
         }
     }
@@ -483,7 +483,7 @@ function getTopGroups(floorInfo) {
         getDict(){
             return{
                 chains:this.chains.map(chain=>chain.getDict()),
-                isComparable:this.isComparable,
+                is_comparable:this.isComparable,
             }
         }
     }

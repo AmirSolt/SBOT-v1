@@ -70,7 +70,7 @@ class Group:
         self.cables:list[Cable] = [Cable(cable) for cable in parsed_group["cables"]]
         
     def get_all_chains(self):
-        return [chain for chain in [cable.chains for cable in self.cables]]
+        return [chain  for cable in self.cables for chain in cable.chains]
         
     def __repr__(self):
         return f"\n{self.instruction=}\n{self.cables=}"
