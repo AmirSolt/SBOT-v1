@@ -159,7 +159,7 @@ class Vis {
         return true;
     }
     static isLowVis(style) {
-        if (style.filter !== "none" || style.opacity < "1") {
+        if (style.filter !== "none" || parseInt(style.opacity) < 1) {
             return true;
         }
         return false;
@@ -513,10 +513,12 @@ function getTopGroups(floorInfo) {
             const style = window.getComputedStyle(el);
 
             return (
-                Segment.isLink(el) 
-                ||
-                getElementTagname(el) === "a" &&
-                style.pointerEvents === 'none'
+                Segment.isLink(el) ||
+                (
+                    getElementTagname(el) === "a" &&
+                    style.pointerEvents === 'none'
+                ) ||
+                Vis.isLowVis(style)
                 // ||
                 // Segment.isOverflow(el, style)
             )
@@ -528,8 +530,8 @@ function getTopGroups(floorInfo) {
                 return false
             if (!Rect.isContaining(page, rect))
                 return false
-            if (Vis.isLowVis(style))
-                return false
+            // if (Vis.isLowVis(style))
+            //     return false
             return true
         }
         static isLink(el) {
@@ -559,11 +561,10 @@ function getTopGroups(floorInfo) {
             return getUniqueCssPath(this.element)
         }
         static getSegment(el) {
-            let segment = IElement.getIElement(el);
-            if (segment == null)
-                segment = TextElement.getTextElement(el)
-            if (segment == null)
-                segment = MediaElement.getMediaElement(el)
+            let segment = null
+            if (segment == null) segment = MediaElement.getMediaElement(el)
+            if (segment == null) segment =IElement.getIElement(el);
+            if (segment == null) segment = TextElement.getTextElement(el)
             if (segment == null || segment.rect == null)
                 return null
             return segment
@@ -654,10 +655,13 @@ function getTopGroups(floorInfo) {
                 return false
             // if(getElementTagname(segment.element)==="label")
             //     return false
-            return !segments.some(seg2=>
-                Rect.areYBoundsOverlaping(segment.rect, seg2.rect) &&
+            return !segments.some(seg2=>{
+                const cond = Rect.areYBoundsOverlaping(segment.rect, seg2.rect) &&
                 seg2.rect.cx < segment.rect.cx
-            )
+                if(cond)
+                    console.log(seg2)
+                return cond
+            })
         }
     }
     // =======================
@@ -667,7 +671,7 @@ function getTopGroups(floorInfo) {
             this.name = "Select"
             this.color = "blue"
             this.wire = "[Option]"
-            this.text = getAllText(element) || ""
+            this.text = getAllText(element) ||  element.getAttribute("value") || ""
         }
         getChain(){
             const action = new Action({
@@ -727,7 +731,7 @@ function getTopGroups(floorInfo) {
             super(element);
             this.name = "Field"
             this.wire = "[Input Field]"
-            this.text = element.getAttribute("placeholder") || getAllText(element) || ""
+            this.text = getAllText(element) || element.getAttribute("value") || ""
         }
         getCable(){
             const action = new Action({
@@ -896,7 +900,7 @@ function getTopGroups(floorInfo) {
             this.name = "Submit"
             this.color = "red"
             this.wire = ""
-            this.text = getAllText(element) ||  ""
+            this.text = getAllText(element) || getAllText(element) ||  ""
         }
         getCable(){
             const action = new Action({
@@ -915,8 +919,8 @@ function getTopGroups(floorInfo) {
                 return false
 
             const style = getComputedStyle(segment.element)
-            if(!ISubmit.hasSubmitBehaviour(segment, style))
-                return false
+            if(ISubmit.hasSubmitBehaviour(segment, style))
+                return true
 
             // check if bg is repeated
             if(Vis.hasBG(style)){
@@ -924,13 +928,7 @@ function getTopGroups(floorInfo) {
                     if(seg===segment)
                         return false
                     const style2 = getComputedStyle(seg.element)
-                    if(
-                        ISubmit.hasSubmitBehaviour(seg, style2)&&
-                            (
-                                seg.rect.x == segment.rect.x ||
-                                seg.rect.y == segment.rect.y 
-                            )
-                        ){
+                    if(Vis.hasBG(style2)){
                         return style.backgroundColor === style2.backgroundColor
                     }
                     return false
@@ -943,12 +941,9 @@ function getTopGroups(floorInfo) {
         static hasSubmitBehaviour(segment, style){
             const possibleSubmitText = ["submit", "continue","next","ok","skip","go","back",">","->","→"]
             return (
-                (
-                    segment.text &&
-                    segment.text.split(" ").length <= 5 &&
-                    possibleSubmitText.includes(segment.text.toLowerCase()) 
-                )||
-                Vis.hasBG(style)
+                segment.text &&
+                segment.text.split(" ").length <= 5 &&
+                possibleSubmitText.includes(segment.text.toLowerCase()) 
             )
         }
     }
@@ -1043,6 +1038,8 @@ function getTopGroups(floorInfo) {
             iselectNonTexted.forEach(iselect=>{
                 const matchingText = itexts.find(itext=>
                     Rect.isWithinMargin(iselect.rect, itext.rect, unit*innerGroupMargin, "r"))
+                if(matchingText !== null)
+                    return
                 iselect.text = matchingText.text
                 usedTexts.push(matchingText)
             })
@@ -1054,10 +1051,10 @@ function getTopGroups(floorInfo) {
             const ielements = group.otherSegments.filter(seg=>seg instanceof IElement)
             return (
                 ielements.length<=0 ||
-                (
-                    ielements.length==1 &&
-                    ielements[0] instanceof ISelect
-                 ) ||
+                // (
+                //     ielements.length==1 &&
+                //     ielements[0] instanceof ISelect
+                //  ) ||
                 (
                     group.type!=GroupType.submit &&
                     Director.isGroupOnEdge(group)
@@ -1218,7 +1215,7 @@ function getTopGroups(floorInfo) {
             return Group.extendText(text, segTexts)
         }
         getCables(){
-            const cables = Director.getCables(this)
+            const cables = Director.getCables(this).filter(Boolean)
             return cables.map(cable=>cable.getDict())
         }
 
@@ -1258,10 +1255,10 @@ function getTopGroups(floorInfo) {
     // ====================== lvl1 segmenting ==========================
     function segmenting0(context) {
         function traverseChildren(element, segments) {
+            if (Segment.toAvoid(element)) {
+                return segments
+            }
             if (Segment.isType(element)) {
-                if (Segment.toAvoid(element)) {
-                    return segments
-                }
                 let segment = Segment.getSegment(element);
                 if (segment) {
                     segments.push(segment);
@@ -1358,12 +1355,11 @@ function getTopGroups(floorInfo) {
             if(submits.length<=0)
                 return 
             const next = submits.sort((a,b)=>{
-                const con = a.rect.y - b.rect.y
+                const con = b.rect.y - a.rect.y
                 if (con === 0)
                     return b.rect.x - a.rect.x
                 return con
             })[0]
-
             const nGroup = new Group()
             next.setGroup(nGroup)
             nGroup.addSegment(next)

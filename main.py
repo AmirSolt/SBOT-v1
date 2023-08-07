@@ -1,5 +1,7 @@
 from app.worker import Worker
 from static.profile_manager import ProfileManager
+import traceback
+import sys
 
 if __name__ == '__main__':
 
@@ -17,7 +19,15 @@ if __name__ == '__main__':
             
             input(">>> next tick:")
             
-            is_over = not worker.tick()
-            
+            try:
+                is_over = not worker.tick()
+            except Exception:
+                print("===================")
+                print("===================")
+                print(traceback.format_exc())
+                print("===================")
+                print("===================")
+                # print(sys.exc_info()[2])
+                
     finally:
         worker.kill()

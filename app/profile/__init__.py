@@ -126,7 +126,7 @@ class Profile:
         })
         
     def reset_survey_memory(self):
-        self.survey_memory = {}
+        self.survey_memory = []
         
     def set_from_seed_dict(self, seed):
         self.id = seed["id"]

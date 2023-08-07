@@ -14,18 +14,7 @@ load_dotenv()
 
 CHAT_INSTRUCTIONS = """Role play as {name}. 
 if you are aksed a question about you, use the information given to answer.
-To answer the question pay attention to [input:... id:...].
-if there's an input similar to "continue" or "next" only choose that.
-You can only respond in the following formats for each input. 
-if input type is Submit, only respond with "id"
-if input type is Select, only respond with "id"
-if input type is Field, respond with "id" and "answer"
-if input type is Dropdown, respond with "id" and "option"
-example response:
-id:x
-id:x answer:...
-id:x option:...
-
+seperate each answer in a new line.
 some information about you:
 {context}
 """
@@ -132,5 +121,5 @@ def get_highest_fuzzy_match_index(t1:str, texts:list[str], thresh:int=0)->int:
     thresh between 0 and 100. 100 is complete match
     """
     scores = [fuzz.ratio(t1.lower(), text.lower()) for text in texts]
-    scores = [score for score in scores if score >= thresh]
+    # scores = [score for score in scores if score >= thresh]
     return scores.index(max(scores))
