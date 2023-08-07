@@ -17,11 +17,17 @@ function highlightElement(target, color, text) {
     container.insertBefore(label, container.firstChild)
     target.insertBefore(container, target.firstChild);
 }
-function highlight(rect, color, label) {
+function highlight(rect, color, label, id) {
     const svgNS = 'http://www.w3.org/2000/svg';
+
+    // var idElements = document.querySelectorAll(`#${id}`);
+    // Array.from(idElements).forEach(function(element) {
+    //     element.remove();
+    // });
 
     // Create SVG element
     const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute("id", id)
     svg.style.position = 'fixed';
     svg.style.top = '0';
     svg.style.left = '0';
@@ -504,10 +510,15 @@ function getTopGroups(floorInfo) {
             return null
         }
         static toAvoid(el) {
+            const style = window.getComputedStyle(el);
+
             return (
                 Segment.isLink(el) 
                 ||
-                Segment.isOverflow(el)
+                getElementTagname(el) === "a" &&
+                style.pointerEvents === 'none'
+                // ||
+                // Segment.isOverflow(el, style)
             )
         }
         static isType(el) {
@@ -533,8 +544,7 @@ function getTopGroups(floorInfo) {
                 )
             )
         }
-        static isOverflow(el){
-            const style = window.getComputedStyle(el);
+        static isOverflow(el, style){
 
             return(
                 style.overflow == "auto" || style.overflow == "scroll" ||
@@ -645,8 +655,8 @@ function getTopGroups(floorInfo) {
             // if(getElementTagname(segment.element)==="label")
             //     return false
             return !segments.some(seg2=>
-                Rect.areYBoundsOverlaping(segment.rect, seg2.rect)&&
-                seg2.rect.x < segment.rect.x
+                Rect.areYBoundsOverlaping(segment.rect, seg2.rect) &&
+                seg2.rect.cx < segment.rect.cx
             )
         }
     }
@@ -707,7 +717,8 @@ function getTopGroups(floorInfo) {
                 // tagName != "button" &&
                 // tagName != "select" &&
                 !Segment.isLink(el) &&
-                style.cursor === 'pointer'
+                style.cursor === 'pointer' &&
+                style.pointerEvents !== 'none'
             )
         }
     }
@@ -930,10 +941,11 @@ function getTopGroups(floorInfo) {
             return true
         }
         static hasSubmitBehaviour(segment, style){
-            const possibleSubmitText = ["submit", "continue","next","ok",">","->","→"]
+            const possibleSubmitText = ["submit", "continue","next","ok","skip","go","back",">","->","→"]
             return (
                 (
                     segment.text &&
+                    segment.text.split(" ").length <= 5 &&
                     possibleSubmitText.includes(segment.text.toLowerCase()) 
                 )||
                 Vis.hasBG(style)
@@ -1003,7 +1015,8 @@ function getTopGroups(floorInfo) {
         }
         static isMedia(group){
             const segments = group.otherSegments
-            return segments.some(seg=>seg instanceof MediaElement)
+            return segments.some(seg=>seg instanceof MediaElement) &&
+                    segments.some(seg=>seg instanceof IElement)
         }
         static isSubmit(group){
             const segments = group.otherSegments
@@ -1038,8 +1051,13 @@ function getTopGroups(floorInfo) {
         }
 
         static isDead(group){
+            const ielements = group.otherSegments.filter(seg=>seg instanceof IElement)
             return (
-                group.otherSegments.length === 0 ||
+                ielements.length<=0 ||
+                (
+                    ielements.length==1 &&
+                    ielements[0] instanceof ISelect
+                 ) ||
                 (
                     group.type!=GroupType.submit &&
                     Director.isGroupOnEdge(group)
@@ -1127,6 +1145,7 @@ function getTopGroups(floorInfo) {
             this.rect = null
             this.instructions = []
             this.otherSegments = []
+            this.instruction = ""
             this.isDead = false
             this.type = GroupType.other
         }
@@ -1150,6 +1169,7 @@ function getTopGroups(floorInfo) {
             this.updateRect(segments)
         }
         update(){
+            this.instruction = this.getInstructionText()
             this.type = Director.getGroupType(this)
             this.isDead = Director.isDead(this)
         }
@@ -1206,7 +1226,7 @@ function getTopGroups(floorInfo) {
             return {
                 "id": this.getID(),
                 "context_path": contextPath,
-                "instruction": this.getInstructionText(),
+                "instruction": this.instruction,
                 "search_verbose": this.getSearchVerbose(),
                 "chat_verbose": this.getChatVerbose(),
                 "type": this.type,
@@ -1217,21 +1237,21 @@ function getTopGroups(floorInfo) {
 
     function highlightSegments(segments) {
         segments.forEach((segment, i) => {
-            highlight(segment.rect, segment.color, `${i}`)
+            highlight(segment.rect, segment.color, `${i}`, "segments-highlight")
         });
     }
     function highlightGroups(groups) {
         groups.forEach((group, i) => {
             if(group.type === GroupType.submit){
-                highlight(group.rect, "#00FFFF", ``)
+                highlight(group.rect, "#00FFFF", ``, "gruops-highlight")
                 return
             }
             if (i == 0) {
-                highlight(group.rect, "#09E912", ``)
+                highlight(group.rect, "#09E912", ``, "gruops-highlight")
             } else if (i == groups.length - 1) {
-                highlight(group.rect, "#fc0303", ``)
+                highlight(group.rect, "#fc0303", ``, "gruops-highlight")
             } else {
-                highlight(group.rect, "#ace010", ``)
+                highlight(group.rect, "#ace010", ``, "gruops-highlight")
             }
         });
     }
@@ -1403,14 +1423,14 @@ function getTopGroups(floorInfo) {
 
     console.log("segments:", gSegments)
 
-    highlightSegments(gSegments)
+    // highlightSegments(gSegments)
 
     const gGroups = getGroups(gSegments)
     // const gGroups = []
 
     console.log("groups:", gGroups)
 
-    // highlightGroups(gGroups)
+    highlightGroups(gGroups)
 
     if (gGroups.length == 0)
         return null
@@ -1437,7 +1457,16 @@ const FLOOR_MULT = 4
 
 // document.body.style.zoom='25%'
 
-const page = new Rect(0, 0, document.body.clientWidth, document.body.clientHeight)
+const zBody = document.body,
+    zHtml = document.documentElement;
+
+const zWidth = Math.max( zBody.scrollWidth, zBody.offsetWidth, 
+    zHtml.clientWidth, zHtml.scrollWidth, zHtml.offsetWidth );
+
+const zHeight = Math.max( zBody.scrollHeight, zBody.offsetHeight, 
+                       zHtml.clientHeight, zHtml.scrollHeight, zHtml.offsetHeight );
+
+const page = new Rect(0, 0, zWidth, zHeight)
 const unit = parseFloat(getComputedStyle(document.documentElement).fontSize);
 
 console.log("page:", page)
