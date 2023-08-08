@@ -26,7 +26,7 @@ def get_filename(path:str)->str:
 def convert_script(path, is_return=False):
     script = read_file(path)
     if is_return:
-        script += "\nreturn msResult"
+        script += "\nreturn zResult"
     return script
         
 

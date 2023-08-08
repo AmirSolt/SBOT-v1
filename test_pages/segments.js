@@ -7,6 +7,101 @@ function getPageRect(doc){
                         zHtml.clientHeight, zHtml.scrollHeight, zHtml.offsetHeight );
     return new Rect(0, 0, zWidth, zHeight)
 }
+function getUniqueCssPath(el) {
+    if (!el || el.nodeType !== Node.ELEMENT_NODE) {
+        return '';
+    }
+    const path = [];
+    while (el.nodeType === Node.ELEMENT_NODE && el.nodeName.toLowerCase() !== 'html') {
+        let selector = el.nodeName.toLowerCase();
+        if (el.parentNode) {
+            const siblings = Array.from(el.parentNode.children);
+            const sameTagSiblings = siblings.filter(sibling => sibling.nodeName.toLowerCase() === selector);
+            if (sameTagSiblings.length > 1) {
+                selector += `:nth-child(${siblings.indexOf(el) + 1})`;
+            }
+        }
+        path.unshift(selector);
+        el = el.parentNode;
+    }
+    return path.join(' > ');
+}
+function cleanText(text) {
+    return text.replace(/\s+/g, ' ').trim();
+}
+function getAllText(element) {
+    const text = element.innerText || '';
+    return cleanText(text)
+}
+function getDirectText(el) {
+    let directText = '';
+    for (let i = 0; i < el.childNodes.length; i++) {
+        if (el.childNodes[i].nodeType === 3) {
+            directText += el.childNodes[i].nodeValue;
+        }
+    }
+    return cleanText(directText)
+}
+function isValidHttpUrl(string) {
+    if (string[0] == "/")
+        return true
+
+    let url;
+    try {
+        url = new URL(string);
+    } catch (_) {
+        return false;
+    }
+
+    return url.protocol === "http:" || url.protocol === "https:"
+}
+function highlight(rect, color, label, id) {
+    const svgNS = 'http://www.w3.org/2000/svg';
+
+    // var idElements = document.querySelectorAll(`#${id}`);
+    // Array.from(idElements).forEach(function(element) {
+    //     element.remove();
+    // });
+
+    // Create SVG element
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute("id", id)
+    svg.style.position = 'fixed';
+    svg.style.top = '0';
+    svg.style.left = '0';
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.pointerEvents = 'none';
+    svg.style.zIndex = '9999';
+    svg.style.fontSize = unit;
+
+    // Create Rectangle
+    const rectangle = document.createElementNS(svgNS, 'rect');
+    rectangle.setAttribute('x', rect.x);
+    rectangle.setAttribute('y', rect.y);
+    rectangle.setAttribute('width', rect.w);
+    rectangle.setAttribute('height', rect.h);
+    rectangle.setAttribute('stroke-width', unit / 8);
+    rectangle.setAttribute('stroke', color);
+    rectangle.setAttribute('fill', 'none');
+
+    // Create Label
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', rect.x);
+    text.setAttribute('y', Number(rect.y) + Number(rect.h)); // Position below the rectangle
+    text.setAttribute('dy', '1.2em'); // Offset below the rectangle
+    text.setAttribute('font-size', unit);
+    text.setAttribute('fill', color); // Color of text same as box's
+    text.setAttribute('stroke', "none");
+    text.textContent = label;
+
+    // Add elements to SVG and then to Body
+    svg.appendChild(rectangle);
+    svg.appendChild(text);
+    document.body.appendChild(svg);
+
+}
+
 class Rect {
     AlignIds = {
         x0 : "left",
@@ -148,9 +243,12 @@ class Vis {
             style.backgroundColor === 'transparent')
     }
 }
+class Tree{
+    getRepeatedTextedElements(elements){
 
+    }
+}
 
-// ============================================
 class Option{
     constructor({path, label, optionIndex=null, wire="[Option]"}){
         this.path = path
@@ -170,39 +268,15 @@ class Segment {
         this.text = null
         this.wire = null
     }
-    getInfo(){
-        return ""
+    getCables(){
     }
-    getCable(){
-        return null
-    }
-    getChain(){
-        return null
-    }
-    static toAvoid(el) {
-        const style = window.getComputedStyle(el);
-
+    static toAvoid(el, rect, style) {
         return (
+            !Vis.isSpatial(style, rect) ||
+            !Rect.isContaining(page, rect) ||
             Segment.isLink(el) ||
-            (
-                getElementTagname(el) === "a" &&
-                style.pointerEvents === 'none'
-            ) ||
             Vis.isLowVis(style)
-            // ||
-            // Segment.isOverflow(el, style)
         )
-    }
-    static isType(el) {
-        const rect = Rect.elementToRect(el)
-        const style = window.getComputedStyle(el);
-        if (!Vis.isSpatial(style, rect))
-            return false
-        if (!Rect.isContaining(page, rect))
-            return false
-        // if (Vis.isLowVis(style))
-        //     return false
-        return true
     }
     static isLink(el) {
         return (
@@ -240,6 +314,7 @@ class Segment {
         return segment
     }
 }
+
 class ISeg extends Segment {
     constructor(element) {
         super(element);
@@ -660,116 +735,29 @@ class IAudio extends MediaSeg{
         )
     }
 }
-// =========
+
+
 function getSegments(doc){
-}
-// ============================================
-class Context{
-    constructor(){
-        this.labels = []
-        this.instructions = []
-        this.medias = []
-    }
-    getLabel(){
+    function traverseChildren(element, segments) {
 
-    }
-    getInstruction(){
+        const rect = Rect.elementToRect(element)
+        const style = getComputedStyle(element)
 
-    }
-    getMediaSrcs(){
-
-    }
-    getDict(){
-        return {
-            instruction:this.getInstruction(),
-            label:this.getLabel(),
-            mediaSrcs:this.getMediaSrcs(),
+        if (Segment.toAvoid(element, rect, style)) {
+            return segments
         }
-    }
-}
-function getContexts(segments){
-
-}
-// ============================================
-const ActionType = {
-    click: "click",
-    dropdown: "dropdown",
-    set_value: "set_value",
-    field: "field",
-    range:"range",
-}
-class Action {
-    constructor({actionType, path, optionIndex=null}) {
-        this.type = actionType
-        this.path = path
-        this.optionIndex = optionIndex
-    }
-    getDict(){
-        return{
-            type:this.actionType,
-            path:this.path,
-            optionIndex:this.optionIndex,
+        let segment = Segment.getSegment(element, rect, style);
+        if (segment) {
+            segments.push(segment);
+            if (segment instanceof ISeg)
+                return segments
         }
-    }
-}
-class Chain {
-    constructor({actions, label, wire}) {
-        this.actions = actions
-        this.label = label
-        this.wire = wire
-    }
-    getDict(){
-        return{
-            actions:this.actions.map(action=>action.getDict()),
-            isOnlyClick:this.actions.every(action=>action.type===ActionType.click),
-            label:this.label,
-            wire:this.wire,
+        for (let i = 0; i < element.children.length; i++) {
+            segments = traverseChildren(element.children[i], segments);
         }
+        return segments;
     }
+    let segments = [];
+    segments = traverseChildren(doc.body, segments);
+    return segments
 }
-class Cable {
-    constructor({chains, context, inputGuide, isComparable}) {
-        this.chains = chains
-        this.context = context
-        this.inputGuide = inputGuide
-        this.isComparable = isComparable
-    }
-    getDict(){
-        return{
-            isComparable:this.isComparable,
-            inputGuide:this.inputGuide,
-            context:this.context.getDict(),
-            chains:this.chains.map(chain=>chain.getDict()),
-        }
-    }
-}
-
-// ============================================
-class Group{
-    constructor(){
-        // rect
-        // cables
-        // segments
-    }
-}
-
-function getGroups(segments){
-}
-
-
-
-
-
-const zDoc = document
-const pageRect = getPageRect(zDoc)
-
-const minMediaSize = 3;
-const minImageSize = 5;
-const zunit = parseFloat(getComputedStyle(zDoc.documentElement).fontSize);
-
-const segments = getSegments(zDoc)
-getContexts(segments)
-
-const zGroups = getGroups(segments)
-const zResult = zGroups
-console.log("result:", zResult)

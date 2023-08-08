@@ -5,23 +5,23 @@ import re
 
 
 class ActionType:
-    field = "field"
-    select = "select"
+    click = "click"
     dropdown = "dropdown"
+    set_value = "set_value"
+    field = "field"
+    range = "range"
 
-class GroupType:
-    list="list"
-    grid="grid"
-    submit="submit"
-    media="media"
-    other="other"
-
+class Context:
+    def __init__(self, e:dict) -> None:
+        self.instruction:str = e["instruction"]
+        self.label:str = e["label"]
+        self.media_srcs:list[str] = e["mediaSrcs"]
 
 class Action:
     def __init__(self, e:dict) -> None:
-        self.action_type:str = e["action_type"]
+        self.type:str = e["type"]
         self.path:str = e["path"]
-        self.option_index:int|None = e.get("option_index")
+        self.option_index:int|None = e.get("optionIndex")
 
     def __repr__(self):
         return f"\n{self.action_type=}|\n{self.path=}"
@@ -29,23 +29,30 @@ class Action:
 class Chain:
     
     def __init__(self, chain:dict) -> None:
-        self.text:str|None = chain.get("text")
-        self.answer:str|None = None
+        self.label:str|None = chain.get("label")
+        self.wire:str|None = chain.get("wire")
         self.actions:list[Action] = [Action(action) for action in chain["actions"]]
-        self.click_only = all(action.action_type == ActionType.select for action in self.actions)
+        self.is_only_click:bool = chain.get("isOnlyClick")
+        self.answer:str|None = None
     
     def set_answer(self, answer):
         self.answer = answer
     
     def __repr__(self):
-        return f"\n{self.text=}"
+        return f"\n{self.wire=} {self.label=}"
   
 
 class Cable:
     
     def __init__(self, cable:dict) -> None:
-        self.is_comparable = cable["is_comparable"]
+        self.context:Context = cable["context"]
+        self.input_guide:str = cable["inputGuide"]
+        self.is_comparable:bool = cable["isComparable"]
         self.chains:list[Chain] = [Chain(chain) for chain in cable["chains"]]
+ 
+    def needsAI(self)->bool:
+        return len(self.chains) == 1 and self.chains[0].is_only_click
+        
  
     def __repr__(self):
         return f"\n{self.chains=}"
@@ -72,6 +79,10 @@ class Group:
     def get_all_chains(self):
         return [chain  for cable in self.cables for chain in cable.chains]
         
+
+
+
+
     def __repr__(self):
         return f"\n{self.instruction=}\n{self.cables=}"
     

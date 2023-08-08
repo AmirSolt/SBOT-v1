@@ -9,6 +9,7 @@ from static.profile_manager import ProfileSeed
 from helper import utils, config
 from funcs import pauser, vacuum, AI
 
+import traceback
 
 
 class Worker:
@@ -34,7 +35,7 @@ class Worker:
         self.last_url = ""
         self.last_group_ids = []
     
-    def __filter_parsed_groups(self, groups:list[Group])->Group|None:
+    def __filter_groups(self, groups:list[Group])->Group|None:
         if not groups:
             return None
         
@@ -48,6 +49,20 @@ class Worker:
         
     
     def tick(self)->bool:
+        try:
+            return self.tick()
+        except Exception:
+            print("===================")
+            print("===================")
+            print(traceback.format_exc())
+            print("===================")
+            print("===================")
+            self.actor.help("Bug")
+            return True
+            
+        
+    
+    def update(self)->bool:
         
         
         print("========== tick starts ==========")
@@ -91,7 +106,7 @@ class Worker:
         self.last_url = browser_url
         parsed_groups = self.browser.get_parsed_groups()
         groups = [Group(p) for p in parsed_groups]
-        group = self.__filter_parsed_groups(groups)
+        group = self.__filter_groups(groups)
         
         if not group:
             self.actor.help("No group")
