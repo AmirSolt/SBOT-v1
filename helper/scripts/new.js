@@ -8,53 +8,73 @@ function getPage(context){
     return new Rect(0, 0, zWidth, zHeight)
 }
 
-class EInfo{
+class Fel{
+}
+class Fub{
 }
 // ============================================
-class Segment{
+class Zel{
 }
-class IElement extends Segment {
-}
-class MediaElement extends Segment {
-}
-class TextElement extends Segment {
-}
-// ===============
-class IText extends TextElement{
-}
-class Instruction extends TextElement{
-}
-class ISelect extends IElement{
-}
-class IField extends IElement{
-}
-class IDropdown extends IElement{
-}
-class CustomDropdown extends IElement{
-}
-class ISubmit extends IElement{
-}
-// ===============
-class IPicture extends MediaElement{
-}
-class IVideo extends MediaElement{
-}
-class IAudio extends MediaElement{
+class Zub{
 }
 // ============================================
-class Action{
+const ActionType = {
+    field: "field",
+    select: "select",
+    dropdown: "dropdown",
 }
-class Chain{
+class Action {
+    constructor({actionType, path, optionIndex}) {
+        this.actionType = actionType
+        this.path = path
+        this.optionIndex = optionIndex
+    }
+    getDict(){
+        return{
+            action_type:this.actionType,
+            path:this.path,
+            option_index:this.optionIndex,
+        }
+    }
+}
+class Chain {
+    constructor({wire, label, actions}) {
+        this.wire = wire
+        this.label = label
+        this.actions = actions
+    }
+    getDict(){
+        return{
+            wire:this.wire,
+            label:this.label,
+            actions:this.actions.map(action=>action.getDict()),
+        }
+    }
+}
+class Cable {
+    constructor({chains, instruction}) {
+        this.instruction = instruction
+        this.chains = chains
+    }
+    getDict(){
+        return{
+            instruction:this.instruction,
+            chains:this.chains.map(chain=>chain.getDict()),
+        }
+    }
 }
 
 
 
+function getFels(context){
+    // loop through elements get fels
+    // loop through fegs get fubs
 
+}
+function getZels(fels){
 
-
-
-
-function getSegments(context){
+}
+function getCables(zels){
 
 }
 
@@ -66,7 +86,7 @@ const minMediaSize = 3;
 const minImageSize = 5;
 const zunit = parseFloat(getComputedStyle(zContext.documentElement).fontSize);
 
-const zSegments = getSegments(zContext)
+const fels = getFels(zContext)
+const zels = getZels(fels)
+const cables = getCables(zels)
 
-// cables
-    // cable: needsAI, context, instructions, actions, actionType, path
