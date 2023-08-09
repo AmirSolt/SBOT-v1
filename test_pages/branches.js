@@ -56,6 +56,10 @@ function getDirectText(el) {
     }
     return cleanText(directText)
 }
+function compareArrs(a, b){
+    return a.length === b.length &&
+    a.every(element => b.some(el=>element===el));
+}
 function isValidHttpUrl(string) {
     if (string[0] == "/")
         return true
@@ -327,7 +331,7 @@ class LText extends LString {
         return getDirectText(element) !== ""
     }
 }
-class LMonozygo extends LString {
+class LOption extends LString {
     static isType(el) {
 
         // if(el !== zDoc.querySelector("#custom-dropdown > div:nth-child(1)"))
@@ -339,11 +343,20 @@ class LMonozygo extends LString {
         const parent = el.parentElement
         if (parent == null)
             return false
-        const siblings = parent.children
-        const textPath = LMonozygo.getTextPath(el, allText[0])
-        const isMonozygotic = Array.from(siblings).some(sib =>
-             LMonozygo.isElementMonozygotic(allText, textPath, sib))
-        return isMonozygotic
+        const parentTexts = getContentTexts(parent)
+        if(parentTexts.length<=1)
+            return false
+        const siblings =  Array.from(parent.children)
+        if(siblings.length<=1)
+            return false
+        const textPath = LOption.getTextPath(el, allText[0])
+        const monozygoSiblings = siblings.filter(sib =>
+             LOption.isElementMonozygotic(allText, textPath, sib))
+        
+        const monozygoTexts = monozygoSiblings.map(sib=>getContentTexts(sib)[0])
+        monozygoTexts.push(allText[0])
+    
+        return compareArrs(parentTexts, monozygoTexts)
     }
 
     static isElementMonozygotic(allText, textPath, targetEl){
@@ -354,14 +367,14 @@ class LMonozygo extends LString {
             return false
         if (sibAllText[0] === allText[0])
             return false
-        const sibTextPath = LMonozygo.getTextPath(targetEl, sibAllText[0])
+        const sibTextPath = LOption.getTextPath(targetEl, sibAllText[0])
         if(sibTextPath == null)
             return false
 
         return textPath === sibTextPath
     }
     static getTextPath(el, text) {
-        const targetEl = LMonozygo.getElementWithText(el, text);
+        const targetEl = LOption.getElementWithText(el, text);
         if (targetEl == null)
             return null
         return getUniqueCssPath(targetEl, el)
@@ -410,8 +423,12 @@ function getLeafs(doc) {
         }
 
         const leaf = Leaf.getLeaf(element);
-        if (leaf)
+        if(leaf){
             leafs.push(leaf);
+            if( SoloParentLeafs.some(SoloParentLeaf=> 
+                    leaf instanceof SoloParentLeaf))
+                return leafs
+        }
 
         Array.from(element.children).forEach(child => {
             leafs = traverseChildren(child, leafs);
@@ -449,6 +466,7 @@ class Branch {
 }
 class BOptions extends Branch {
     // LOptions>1 spatial
+    // no other Leafs between them
 }
 class BInput extends Branch {
     // LInput and spatial
@@ -475,8 +493,8 @@ function getBranches(leafs) {
 
 
 
-const LeafClasses = [LMonozygo, LText, LInput, LSelect, LImage]
-
+const LeafClasses = [LOption, LText, LInput, LSelect, LImage]
+const SoloParentLeafs = [LOption, LImage]
 
 const zDoc = document
 const pageRect = getPageRect(zDoc)
@@ -488,8 +506,8 @@ const zUnit = parseFloat(getComputedStyle(zDoc.documentElement).fontSize);
 const zLeafs = getLeafs(zDoc)
 
 zLeafs.forEach(leaf=>{
-    if(leaf instanceof LMonozygo)
-        highlight(Rect.elementToRect(leaf.element), "red", "", "test")
+    if(leaf instanceof LOption)
+        highlight(Rect.elementToRect(leaf.element), "yellow", "", "test")
 })
 
 // const zBranches = getBranches(zLeafs)
