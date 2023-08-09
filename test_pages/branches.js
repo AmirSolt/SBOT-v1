@@ -1,21 +1,23 @@
-function getPageRect(doc){
+function getPageRect(doc) {
     const zBody = doc.body,
-    zHtml = document.documentElement;
-    const zWidth = Math.max( zBody.scrollWidth, zBody.offsetWidth, 
-        zHtml.clientWidth, zHtml.scrollWidth, zHtml.offsetWidth );
-    const zHeight = Math.max( zBody.scrollHeight, zBody.offsetHeight, 
-                        zHtml.clientHeight, zHtml.scrollHeight, zHtml.offsetHeight );
+        zHtml = document.documentElement;
+    const zWidth = Math.max(zBody.scrollWidth, zBody.offsetWidth,
+        zHtml.clientWidth, zHtml.scrollWidth, zHtml.offsetWidth);
+    const zHeight = Math.max(zBody.scrollHeight, zBody.offsetHeight,
+        zHtml.clientHeight, zHtml.scrollHeight, zHtml.offsetHeight);
     return new Rect(0, 0, zWidth, zHeight)
 }
 function getElementTagname(el) {
     return el.tagName.toLowerCase();
 }
-function getUniqueCssPath(el) {
+function getUniqueCssPath(el, root) {
+    if(el === root)
+        return ""
     if (!el || el.nodeType !== Node.ELEMENT_NODE) {
         return '';
     }
     const path = [];
-    while (el.nodeType === Node.ELEMENT_NODE && el.nodeName.toLowerCase() !== 'html') {
+    while (el && el.nodeType === Node.ELEMENT_NODE && el !== root) {
         let selector = el.nodeName.toLowerCase();
         if (el.parentNode) {
             const siblings = Array.from(el.parentNode.children);
@@ -25,8 +27,10 @@ function getUniqueCssPath(el) {
             }
         }
         path.unshift(selector);
-        el = el.parentNode;
+        el = el.parentElement;
     }
+    if(path.length === 0 )
+        return ""
     return path.join(' > ');
 }
 function cleanText(text) {
@@ -35,6 +39,13 @@ function cleanText(text) {
 function getAllText(element) {
     const text = element.innerText || '';
     return cleanText(text)
+}
+function getContentTexts(el) {
+    if (el.textContent == null)
+        return []
+    return el.textContent.split('\n')
+        .map(s => cleanText(s))
+        .filter(Boolean)
 }
 function getDirectText(el) {
     let directText = '';
@@ -107,12 +118,12 @@ function highlight(rect, color, label, id) {
 
 class Rect {
     AlignIds = {
-        x0 : "left",
-        x1 : "center_x",
-        x2 : "right",
-        y0 : "top",
-        y1 : "center_y",
-        y2 : "bottom",
+        x0: "left",
+        x1: "center_x",
+        x2: "right",
+        y0: "top",
+        y1: "center_y",
+        y2: "bottom",
     }
 
     constructor(x, y, w, h) {
@@ -126,20 +137,20 @@ class Rect {
     get area() {
         return this.w * this.h
     }
-    getAlignment(alignId){
+    getAlignment(alignId) {
         switch (alignId.toLowerCase().trim()) {
             case Rect.AlignIds.x0:
                 return this.x
             case Rect.AlignIds.x1:
                 return this.cx
             case Rect.AlignIds.x2:
-                return this.x+this.w
+                return this.x + this.w
             case Rect.AlignIds.y0:
                 return this.y
             case Rect.AlignIds.y1:
                 return this.cy
             case Rect.AlignIds.y2:
-                return this.y+this.h
+                return this.y + this.h
             default:
                 throw new Error(`direction: ${direction} doesnt exist`);
         }
@@ -249,12 +260,15 @@ class Vis {
 
 // ================================
 
-class Leaf{
-    constructor(element){
-        this.element=element
+class Leaf {
+    constructor(element) {
+        this.element = element
     }
-    static isToAvoide(element){
-        return Leaf.isLink(element)
+    static isToAvoide(element) {
+        return (
+            element == null ||
+            Leaf.isLink(element)
+        )
     }
     static isLink(el) {
         return (
@@ -268,7 +282,7 @@ class Leaf{
             )
         )
     }
-    static getLeaf(element){
+    static getLeaf(element) {
         const LeafClass = LeafClasses.find(LeafClass => LeafClass.isType(element))
         if (!LeafClass)
             return null
@@ -276,10 +290,10 @@ class Leaf{
     }
 }
 // ======
-class LInteractive extends Leaf{
+class LInteractive extends Leaf {
 }
-class LInput extends LInteractive{
-    static isType(element){
+class LInput extends LInteractive {
+    static isType(element) {
         const tagName = getElementTagname(element)
         const attrType = element.getAttribute("type")
 
@@ -297,80 +311,88 @@ class LInput extends LInteractive{
                 attrType == "email"
             )
         ) ||
-        tagName == "textarea"
+            tagName == "textarea"
     }
 }
-class LSelect extends LInteractive{
-    static isType(element){
+class LSelect extends LInteractive {
+    static isType(element) {
         return getElementTagname(element) == "select"
     }
 }
 // ======
-class LString extends Leaf{
+class LString extends Leaf {
 }
-class LText extends LString{
-    static isType(element){
+class LText extends LString {
+    static isType(element) {
         return getDirectText(element) !== ""
     }
 }
-class LOption extends LString{
-    static isType(el){
-        const allText = getAllText(el)
-        if(allText.length!==1)
-            return false
+class LMonozygo extends LString {
+    static isType(el) {
 
-        const parent = el.parent
-        const parentAllText = getAllText(parent)
-        if(parentAllText.length<2)
+        // if(el !== zDoc.querySelector("#custom-dropdown > div:nth-child(1)"))
+        //     return false
+
+        const allText = getContentTexts(el)
+        if (allText.length !== 1)
             return false
-        
+        const parent = el.parentElement
+        if (parent == null)
+            return false
         const siblings = parent.children
-        const textPath = LOption.getTextPath(el, allText[0])
-        const isMonozygotic = Array.from(siblings).some(sib=>{
-            const sibAllText = getAllText(sib)
-            if(sibAllText.length!==1)
-                return false
-            if(sibAllText[0] === allText[0])
-                return False
-            const sibTextPath = LOption.getTextPath(el, allText[0])
-
-            return textPath === sibTextPath
-        })
+        const textPath = LMonozygo.getTextPath(el, allText[0])
+        const isMonozygotic = Array.from(siblings).some(sib =>
+             LMonozygo.isElementMonozygotic(allText, textPath, sib))
         return isMonozygotic
     }
 
-    static getTextPath(el, text){
-        const targetEl = LOption.getElementWithText(el, text);
+    static isElementMonozygotic(allText, textPath, targetEl){
         if(targetEl == null)
-            throw new Error('==== Could not Text Path ====');
-        return getUniqueCssPath(targetEl)
+            return false
+        const sibAllText = getContentTexts(targetEl)
+        if (sibAllText.length !== 1)
+            return false
+        if (sibAllText[0] === allText[0])
+            return false
+        const sibTextPath = LMonozygo.getTextPath(targetEl, sibAllText[0])
+        if(sibTextPath == null)
+            return false
+
+        return textPath === sibTextPath
+    }
+    static getTextPath(el, text) {
+        const targetEl = LMonozygo.getElementWithText(el, text);
+        if (targetEl == null)
+            return null
+        return getUniqueCssPath(targetEl, el)
     }
     static getElementWithText(el, text) {
         function search(element) {
-             if (getDirectText(element) === text) {
-                   return element
-             } else {
-                  Array.from(element.children).forEach(child=>{
-                    return search(child)
-                  })
-             }
-            return null
+            if (getDirectText(element) === text) {
+                return element
+            } else {
+                let result = null
+                Array.from(element.children).forEach(child => {
+                    if(result!= null)
+                        return
+                    result = search(child)
+                })
+                return result
+            }
         }
-
-
         return search(el);
     }
 }
 // ======
-class LMedia extends Leaf{
+class LMedia extends Leaf {
 }
-class LImage extends LMedia{
-    static isType(element){
+class LImage extends LMedia {
+    static isType(element) {
         return (
             getElementTagname(element) == "img" &&
             element.getAttribute("src") != null &&
             LImage.isMinImageSize(element)
-        ) 
+        )
     }
     static isMinImageSize(el) {
         const rect = Rect.elementToRect(el)
@@ -381,7 +403,7 @@ class LImage extends LMedia{
     }
 }
 
-function getLeafs(doc){
+function getLeafs(doc) {
     function traverseChildren(element, leafs) {
         if (Leaf.isToAvoide(element)) {
             return leafs
@@ -391,10 +413,10 @@ function getLeafs(doc){
         if (leaf)
             leafs.push(leaf);
 
-        Array.from(element.children).forEach(child=>{
+        Array.from(element.children).forEach(child => {
             leafs = traverseChildren(child, leafs);
         })
-     
+
         return leafs;
     }
     let leafs = [];
@@ -408,16 +430,16 @@ function getLeafs(doc){
 
 // calc proximity of Leafs based on html cusin or sibling or parent or child
 
-class Branch{
-    constructor(){
+class Branch {
+    constructor() {
         this.guide = ""
         this.label = this.getLabel()
         this.context = this.getContext()
     }
-    getLabel(){
+    getLabel() {
         // gonna depend on element
     }
-    getContext(){
+    getContext() {
         // sort leafs by proximity
         // loop
         // if media and instructions is empty add
@@ -425,35 +447,35 @@ class Branch{
         // if anything else break
     }
 }
-class BOptions extends Branch{
+class BOptions extends Branch {
     // LOptions>1 spatial
 }
-class BInput extends Branch{
+class BInput extends Branch {
     // LInput and spatial
 }
-class BSelect extends Branch{
+class BSelect extends Branch {
     // LSelect and spatial
     // LOptions>1 and non spatial
     // Children
 }
-class BDropdown extends Branch{
+class BDropdown extends Branch {
     // LText is spatial
     // LOptions>1 and non spatial
     // Cusin score
 }
-class BSubmit extends Branch{
+class BSubmit extends Branch {
     // LText and pointer and spatial
 }
 
-function getBranches(leafs){
-    leafs.forEach(leaf=>{
-        
+function getBranches(leafs) {
+    leafs.forEach(leaf => {
+
     })
 }
 
 
 
-const LeafClasses = [LOption, LText, LInput, LSelect, LImage]
+const LeafClasses = [LMonozygo, LText, LInput, LSelect, LImage]
 
 
 const zDoc = document
@@ -464,5 +486,11 @@ const minImageSize = 5;
 const zUnit = parseFloat(getComputedStyle(zDoc.documentElement).fontSize);
 
 const zLeafs = getLeafs(zDoc)
+
+zLeafs.forEach(leaf=>{
+    if(leaf instanceof LMonozygo)
+        highlight(Rect.elementToRect(leaf.element), "red", "", "test")
+})
+
 // const zBranches = getBranches(zLeafs)
 console.log(zLeafs)
