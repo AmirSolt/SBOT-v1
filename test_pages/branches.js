@@ -7,6 +7,9 @@ function getPageRect(doc){
                         zHtml.clientHeight, zHtml.scrollHeight, zHtml.offsetHeight );
     return new Rect(0, 0, zWidth, zHeight)
 }
+function getElementTagname(el) {
+    return el.tagName.toLowerCase();
+}
 function getUniqueCssPath(el) {
     if (!el || el.nodeType !== Node.ELEMENT_NODE) {
         return '';
@@ -73,7 +76,7 @@ function highlight(rect, color, label, id) {
     svg.style.height = '100%';
     svg.style.pointerEvents = 'none';
     svg.style.zIndex = '9999';
-    svg.style.fontSize = unit;
+    svg.style.fontSize = zUnit;
 
     // Create Rectangle
     const rectangle = document.createElementNS(svgNS, 'rect');
@@ -81,7 +84,7 @@ function highlight(rect, color, label, id) {
     rectangle.setAttribute('y', rect.y);
     rectangle.setAttribute('width', rect.w);
     rectangle.setAttribute('height', rect.h);
-    rectangle.setAttribute('stroke-width', unit / 8);
+    rectangle.setAttribute('stroke-width', zUnit / 8);
     rectangle.setAttribute('stroke', color);
     rectangle.setAttribute('fill', 'none');
 
@@ -90,7 +93,7 @@ function highlight(rect, color, label, id) {
     text.setAttribute('x', rect.x);
     text.setAttribute('y', Number(rect.y) + Number(rect.h)); // Position below the rectangle
     text.setAttribute('dy', '1.2em'); // Offset below the rectangle
-    text.setAttribute('font-size', unit);
+    text.setAttribute('font-size', zUnit);
     text.setAttribute('fill', color); // Color of text same as box's
     text.setAttribute('stroke', "none");
     text.textContent = label;
@@ -248,46 +251,139 @@ class Vis {
 
 class Leaf{
     constructor(element){
+        this.element=element
     }
     static isToAvoide(element){
-        // is link
+        return Leaf.isLink(element)
     }
-    static isType(element){
+    static isLink(el) {
+        return (
+            getElementTagname(el) === "a" &&
+            (
+                (
+                    el.getAttribute("href") != null &&
+                    isValidHttpUrl(el.getAttribute("href"))
+                ) ||
+                el.getAttribute("target") == "_blank"
+            )
+        )
     }
     static getLeaf(element){
         const LeafClass = LeafClasses.find(LeafClass => LeafClass.isType(element))
         if (!LeafClass)
             return null
-        return new LeafClass(el);
+        return new LeafClass(element);
     }
 }
 // ======
 class LInteractive extends Leaf{
 }
 class LInput extends LInteractive{
+    static isType(element){
+        const tagName = getElementTagname(element)
+        const attrType = element.getAttribute("type")
+
+        return (
+            tagName == "input" &&
+            (
+                attrType == "text" ||
+                attrType == "textarea" ||
+                attrType == "date" ||
+                attrType == "email" ||
+                attrType == "number" ||
+                attrType == "password" ||
+                attrType == "range" ||
+                attrType == "tel" ||
+                attrType == "email"
+            )
+        ) ||
+        tagName == "textarea"
+    }
 }
 class LSelect extends LInteractive{
-}
-class LPointer extends LInteractive{
-    // has pointer and pointer event
+    static isType(element){
+        return getElementTagname(element) == "select"
+    }
 }
 // ======
 class LString extends Leaf{
 }
 class LText extends LString{
+    static isType(element){
+        return getDirectText(element) !== ""
+    }
 }
 class LOption extends LString{
-    // if atleast one sibling identical
+    static isType(el){
+        const allText = getAllText(el)
+        if(allText.length!==1)
+            return false
+
+        const parent = el.parent
+        const parentAllText = getAllText(parent)
+        if(parentAllText.length<2)
+            return false
+        
+        const siblings = parent.children
+        const textPath = LOption.getTextPath(el, allText[0])
+        const isMonozygotic = Array.from(siblings).some(sib=>{
+            const sibAllText = getAllText(sib)
+            if(sibAllText.length!==1)
+                return false
+            if(sibAllText[0] === allText[0])
+                return False
+            const sibTextPath = LOption.getTextPath(el, allText[0])
+
+            return textPath === sibTextPath
+        })
+        return isMonozygotic
+    }
+
+    static getTextPath(el, text){
+        const targetEl = LOption.getElementWithText(el, text);
+        if(targetEl == null)
+            throw new Error('==== Could not Text Path ====');
+        return getUniqueCssPath(targetEl)
+    }
+    static getElementWithText(el, text) {
+        function search(element) {
+             if (getDirectText(element) === text) {
+                   return element
+             } else {
+                  Array.from(element.children).forEach(child=>{
+                    return search(child)
+                  })
+             }
+            return null
+        }
+
+
+        return search(el);
+    }
 }
 // ======
 class LMedia extends Leaf{
 }
 class LImage extends LMedia{
+    static isType(element){
+        return (
+            getElementTagname(element) == "img" &&
+            element.getAttribute("src") != null &&
+            LImage.isMinImageSize(element)
+        ) 
+    }
+    static isMinImageSize(el) {
+        const rect = Rect.elementToRect(el)
+        return (
+            rect.w > minImageSize * zUnit &&
+            rect.h > minImageSize * zUnit
+        )
+    }
 }
 
 function getLeafs(doc){
     function traverseChildren(element, leafs) {
-        if (Leaf.toAvoid(element)) {
+        if (Leaf.isToAvoide(element)) {
             return leafs
         }
 
@@ -301,7 +397,7 @@ function getLeafs(doc){
      
         return leafs;
     }
-    const leafs = [];
+    let leafs = [];
     leafs = traverseChildren(doc.body, leafs);
     return leafs
 }
@@ -319,8 +415,14 @@ class Branch{
         this.context = this.getContext()
     }
     getLabel(){
+        // gonna depend on element
     }
     getContext(){
+        // sort leafs by proximity
+        // loop
+        // if media and instructions is empty add
+        // if text add
+        // if anything else break
     }
 }
 class BOptions extends Branch{
@@ -359,7 +461,8 @@ const pageRect = getPageRect(zDoc)
 
 const minMediaSize = 3;
 const minImageSize = 5;
-const zunit = parseFloat(getComputedStyle(zDoc.documentElement).fontSize);
+const zUnit = parseFloat(getComputedStyle(zDoc.documentElement).fontSize);
 
 const zLeafs = getLeafs(zDoc)
-const zBranches = getBranches(zLeafs)
+// const zBranches = getBranches(zLeafs)
+console.log(zLeafs)
