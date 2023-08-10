@@ -332,6 +332,10 @@ class LText extends LString {
     }
 }
 class LOption extends LString {
+    constructor(element) {
+        super(element)
+        this.parent = element.parentElement
+    }
     static isType(el) {
 
         // if(el !== zDoc.querySelector("#custom-dropdown > div:nth-child(1)"))
@@ -453,6 +457,12 @@ class Branch {
         this.label = this.getLabel()
         this.context = this.getContext()
     }
+    updateRect(elements) {
+        const rects = elements.map(el=>Rect.elementToRect(el))
+        if(this.rect!=null)
+            rects.push(this.rect)
+        this.rect = Rect.combineRects(rects)
+    }
     getLabel() {
         // gonna depend on element
     }
@@ -463,10 +473,31 @@ class Branch {
         // if text add
         // if anything else break
     }
+    static produceBranches(){
+
+    }
 }
+
 class BOptions extends Branch {
     // LOptions>1 spatial
     // no other Leafs between them
+    static produceBranches(leafs){
+        let clusters = [[]]
+        leafs.forEach(leaf=>{
+            if(clusters.at(-1).length ==0 || leaf.parent == clusters.at(-1).at(-1).parent){
+                clusters.at(-1).push(leaf)
+            }else{
+                clusters.push([leaf])
+            }
+        })
+        clusters = clusters.filter(cluster=>cluster.length>=2)
+
+        const branches = clusters.map(cluster => {
+            new BOptions(cluster)
+        });
+
+        return branches
+    }
 }
 class BInput extends Branch {
     // LInput and spatial
@@ -486,8 +517,9 @@ class BSubmit extends Branch {
 }
 
 function getBranches(leafs) {
-    leafs.forEach(leaf => {
-
+    const branches = []
+    BranchClasses.forEach(BranchClass=>{
+        branches.push(...BranchClass.produceBranches(leafs))
     })
 }
 
@@ -495,6 +527,7 @@ function getBranches(leafs) {
 
 const LeafClasses = [LOption, LText, LInput, LSelect, LImage]
 const SoloParentLeafs = [LOption, LImage]
+const BranchClasses = [BInput, BSelect, BDropdown, BSubmit, BOptions]
 
 const zDoc = document
 const pageRect = getPageRect(zDoc)
@@ -505,9 +538,15 @@ const zUnit = parseFloat(getComputedStyle(zDoc.documentElement).fontSize);
 
 const zLeafs = getLeafs(zDoc)
 
-zLeafs.forEach(leaf=>{
-    if(leaf instanceof LOption)
-        highlight(Rect.elementToRect(leaf.element), "yellow", "", "test")
+// zLeafs.forEach(leaf=>{
+//     if(leaf instanceof LOption)
+//         highlight(Rect.elementToRect(leaf.element), "yellow", "", "test")
+// })
+
+const zBranches = getBranches(zLeafs)
+
+zBranches.forEach(branch=>{
+    highlight(branch.rect, "yellow", "", "test")
 })
 
 // const zBranches = getBranches(zLeafs)
